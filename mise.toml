@@ -1,0 +1,4 @@
+[tasks.gemini-in-sandbox]
+description = "Run Gemini in a sandbox environment"
+run = "gemini -y"
+env = { SEATBELT_PROFILE = "gradle", GEMINI_SANDBOX = "sandbox-exec", GEMINI_MODEL = "gemini-2.5-pro" }

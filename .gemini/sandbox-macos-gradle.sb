@@ -1,0 +1,24 @@
+(version 1)
+
+;; allow everything by default
+(allow default)
+
+(deny file-read* (subpath (string-append (param "HOME_DIR") "/.ssh")))
+
+;; deny all writes EXCEPT under specific paths
+(deny file-write*)
+(allow file-write*
+    (subpath (param "TARGET_DIR"))
+    (subpath (param "TMP_DIR"))
+    (subpath (param "CACHE_DIR"))
+    (subpath (string-append (param "HOME_DIR") "/.gemini"))
+    (subpath (string-append (param "HOME_DIR") "/.npm"))
+    (subpath (string-append (param "HOME_DIR") "/.cache"))
+    (subpath (string-append (param "HOME_DIR") "/.gitconfig"))
+    (subpath (string-append (param "HOME_DIR") "/.gradle"))
+    (subpath (string-append (param "HOME_DIR") "/Library/Application/Support/kotlin"))
+    (subpath (string-append (param "HOME_DIR") "/.konan"))
+    (literal "/dev/stdout")
+    (literal "/dev/stderr")
+    (literal "/dev/null")
+)
