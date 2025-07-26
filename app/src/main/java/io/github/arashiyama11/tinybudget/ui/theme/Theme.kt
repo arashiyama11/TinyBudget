@@ -1,7 +1,5 @@
 package io.github.arashiyama11.tinybudget.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -9,12 +7,55 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Color(0xFF4E535E),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFF2B2F36),
+    onPrimaryContainer = Color(0xFFFFFFFF),
+    inversePrimary = Color(0xFFBFC4CB),
+
+    secondary = Color(0xFF7F8896),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFF2A2F37),
+    onSecondaryContainer = Color(0xFFFFFFFF),
+
+    tertiary = Color(0xFFAFBAC1),
+    onTertiary = Color(0xFF202528),
+    tertiaryContainer = Color(0xFFE1E5E8),
+    onTertiaryContainer = Color(0xFF000000),
+
+    background = Color(0xFF353742),
+    onBackground = Color(0xFFECEFF4),
+    surface = Color(0xFF353742),
+    onSurface = Color(0xFFECEFF4),
+
+    surfaceVariant = Color(0xFF4E535E),
+    onSurfaceVariant = Color(0xFFFFFFFF),
+    surfaceTint = Color(0xFF4E535E),
+
+    inverseSurface = Color(0xFFECEFF4),
+    inverseOnSurface = Color(0xFF353742),
+
+    error = Color(0xFFB3261E),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+
+    outline = Color(0xFF7F8896),
+    outlineVariant = Color(0xFFAFBAC1),
+    scrim = Color(0xFF000000),
+
+    surfaceBright = Color(0xFFECEFF4),
+    surfaceDim = Color(0xFF2A2C30),
+
+    surfaceContainer = Color(0xFF3F4146),
+    surfaceContainerHigh = Color(0xFF4A4D52),
+    surfaceContainerHighest = Color(0xFF55585E),
+    surfaceContainerLow = Color(0xFF25262A),
+    surfaceContainerLowest = Color(0xFF1A1B1D),
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -36,12 +77,11 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun TinyBudgetTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicColor -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
