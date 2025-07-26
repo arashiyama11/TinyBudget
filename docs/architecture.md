@@ -1,73 +1,71 @@
-### アーキテクチャ概要
+# アーキテクチャ設計書
 
-以下のコンポーネントを持つレイヤードアーキテクチャを使用します。
+## 概要
 
-1.  **UIレイヤー (View):** Jetpack ComposeとCircuit。UIのレンダリングとユーザーイベントの転送を担当します。
-    *   **`CircuitScreen`:** 各画面のナビゲーションルートとUIの状態/イベントモデルを定義します。
-    *   **Composables:** 状態を受け取り、イベントを発行するステートレスなUIコンポーネントです。
-2.  **プレゼンテーションレイヤー (Presenter):** Circuit Presenter。
-    *   **`Presenter`:** UIイベントを処理し、データレイヤー（リポジトリ）と対話し、UIの状態を生成します。
-3.  **データレイヤー:**
-    *   **リポジトリ:** アプリのデータの単一の信頼できる情報源。データソースを抽象化し、プレゼンテーションレイヤーにクリーンなAPIを提供します。
-    *   **データソース:**
-        *   **ローカルデータソース:** Roomを使用してデバイスに保存されたデータを管理します。
-        *   **(オプション) リモートデータソース:** クラウドバックアップ/同期などの機能のために後で追加できます。
-4.  **サービス:** バックグラウンドタスク用のAndroidサービス。
-    *   **`AccessibilityService`:** ターゲットアプリが起動されたことを検出します。
-    *   **`OverlayService`:** トランザクションを入力するためのオーバーレイを表示します。
-5.  **依存性注入:** 依存関係を管理するためのHilt。
-### データフロー図
+Circuitと手動DI（Dependency Injection）を用いた、クリーンアーキテクチャに近い構成を目指します。
+
+### レイヤー構造
+
+1. **UIレイヤー (View):**
+    * **役割:** UIの表示とユーザー入力の受付。
+    * **技術:** Jetpack Compose, Circuit
+    * **コンポーネント:**
+        * `CircuitScreen`: 画面の定義、状態（State）、イベント（Event）。
+        * `Composables`: 状態（State）に基づきUIを描画し、ユーザー操作をイベント（Event）としてPresenterに通知する、ステートレスな関数。
+
+2. **プレゼンテーションレイヤー (Presenter):**
+    * **役割:** UIロジックの担当。UIからのイベントを受け取り、データレイヤーと連携してUIの状態を更新する。
+    * **技術:** Circuit
+    * **コンポーネント:**
+        * `Presenter`: `Repository`からデータを取得し、UIのための状態（State）を生成する。
+
+3. **データレイヤー:**
+    * **役割:** アプリケーションのデータ管理とビジネスロジック。
+    * **コンポーネント:**
+        * **`Repository`:**
+          データソース（ローカルDB、将来的にはリモートAPIなど）を抽象化し、Presenterに一貫したAPIを提供する。アプリの唯一の信頼できる情報源（Single
+          Source of Truth）。
+        * **`DataSource`:**
+            * **Local:** Roomデータベースとのやり取りを担当するDAO。
+
+4. **サービスレイヤー:**
+    * **役割:** バックグラウンド処理。
+    * **コンポーネント:**
+        * `AccessibilityService`: 指定アプリの起動を検知する。
+        * `OverlayService`: オーバーレイUIを表示・管理する。
+
+### データフロー
 
 ```mermaid
 graph TD
-    subgraph "UIレイヤー (Compose)"
+    subgraph "UI Layer (Compose)"
         direction LR
-        MainActivity -- hosts --> CircuitContent
-        CircuitContent -- navigates to --> ScreenUI["Screen UI (Composables)"]
+        ScreenUI["Screen UI (Composables)"] -- "User Events" --> Presenter
+        Presenter -- "UI State" --> ScreenUI
     end
 
-    subgraph "プレゼンテーションレイヤー (Circuit)"
-        ScreenUI -- "ユーザーイベント (クリックなど)" --> Presenter
-        Presenter -- "UIの状態" --> ScreenUI
+    subgraph "Presentation Layer (Circuit)"
+        Presenter
     end
 
-    subgraph "データレイヤー"
+    subgraph "Data Layer"
         direction LR
-        Repository -- "データ" --> Presenter
-        LocalDataSource["ローカルデータソース (Room)"] -- "データ" --> Repository
-        Database["(SQLiteデータベース)"] -- "データ" --> LocalDataSource
+        Repository
+        LocalDataSource["Local DB (Room)"] -- reads/writes --> Repository
     end
 
-    subgraph "バックグラウンドサービス"
-        direction TB
-        AccessibilityService -- "開始" --> OverlayService
-        OverlayService -- "データ保存" --> Repository
+    subgraph "Service Layer"
+        OverlayService
+        AccessibilityService
     end
 
-    subgraph "依存性注入 (Hilt)"
-        Hilt -- "注入" --> Presenter
-        Hilt -- "注入" --> Repository
-        Hilt -- "注入" --> Services["AccessibilityService & OverlayService"]
+    subgraph "Application Class (DI Container)"
+        App["TinyBudgetApp"]
     end
 
-    Presenter -- "リポジトリ関数を呼び出す" --> Repository
+    Presenter -- "uses" --> Repository
+    OverlayService -- "uses" --> Repository
+
+    App -- "creates & holds" --> Repository
+    Repository -- "is created with" --> LocalDataSource
 ```
-
-### コンポーネントの説明
-
-1.  **`app/src/main/java/com/example/tinybudget/`**: メインのアプリケーションパッケージ。
-2.  **`di/`**: `AppDatabase`、DAO、`TransactionRepository`などの依存関係を提供するためのHiltモジュール。
-3.  **`data/`**:
-    *   **`model/`**: データベースエンティティを表すデータクラス（`Transaction`、`Category`）を格納します。
-    *   **`local/`**: Roomの`AppDatabase`クラスと、データベース操作のための`TransactionDao`および`CategoryDao`インターフェースを格納します。
-    *   **`TransactionRepository.kt`**: 単一の信頼できる情報源。DAOが注入され、`addTransaction`、`getMonthlySummary`などのメソッドをプレゼンターに提供します。データソースをプレゼンテーションレイヤーから抽象化します。
-4.  **`ui/`**:
-    *   **`screens/`**: 各サブパッケージ（例：`home`、`settings`）はアプリの画面を表します。
-        *   **`HomeScreen.kt` / `SettingsScreen.kt`**: これらのファイルは、`CircuitScreen`（ルート）、`State`データクラス、およびその画面の`Event`シールインターフェースを定義します。また、画面UIのメインのComposable関数も含まれます。
-        *   **`HomePresenter.kt` / `SettingsPresenter.kt`**: これらのプレゼンターは、それぞれの画面のビジネスロジックを処理します。`TransactionRepository`が注入され、UIイベントを処理し、新しいUIの状態を発行します。
-    *   **`theme/`**: 標準のJetpack Composeテーマ設定。
-5.  **`services/`**:
-    *   **`TransactionAccessibilityService.kt`**: ターゲットアプリがフォアグラウンドにあることを監視する`AccessibilityService`。検出されると、`OverlayService`を開始します。
-    *   **`OverlayService.kt`**: `WindowManager`を使用してオーバーレイウィンドウを作成および管理する`Service`。トランザクション入力用のJetpack Compose `View`をホストします。データを保存するために`TransactionRepository`が注入されます。
-6.  **`MainActivity.kt`**: UIのメインエントリポイント。`CircuitContent` Composableをホストします。
-7.  **`TinyBudgetApp.kt`**: `@HiltAndroidApp`でアノテーションが付けられた`Application`クラス。
