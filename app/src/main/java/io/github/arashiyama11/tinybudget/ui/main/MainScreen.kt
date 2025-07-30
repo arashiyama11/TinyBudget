@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.tooling.preview.Preview
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
@@ -224,19 +227,28 @@ private fun TransactionListItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = transaction.category.name, style = MaterialTheme.typography.titleMedium)
+        Row(
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier) {
+                Text(text = transaction.category.name, style = MaterialTheme.typography.titleMedium)
+
+                Text(
+                    text = SimpleDateFormat(
+                        "yyyy-MM-dd",
+                        Locale.getDefault()
+                    ).format(Date(transaction.date)),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             if (transaction.note.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(text = transaction.note, style = MaterialTheme.typography.bodySmall)
             }
-            Text(
-                text = SimpleDateFormat(
-                    "yyyy-MM-dd",
-                    Locale.getDefault()
-                ).format(Date(transaction.date)),
-                style = MaterialTheme.typography.bodySmall
-            )
         }
+
         Text(text = "${transaction.amount.value} JPY", style = MaterialTheme.typography.bodyLarge)
     }
 }
@@ -275,4 +287,17 @@ fun MainUi(state: MainScreen.State, modifier: Modifier) {
             TransactionList(transactions = state.transactions, eventSink = state.eventSink)
         }
     }
+}
+
+@Composable
+@Preview
+fun TransactionItemPreview() {
+    val transaction = Transaction(
+        id = TransactionId("1"),
+        amount = Amount(1000),
+        date = System.currentTimeMillis(),
+        category = Category(id = CategoryId("1"), name = "Food"),
+        note = "メモだよー"
+    )
+    TransactionListItem(transaction = transaction, onClick = {})
 }
