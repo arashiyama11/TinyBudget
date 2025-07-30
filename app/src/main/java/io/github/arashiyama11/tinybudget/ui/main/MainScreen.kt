@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.fontscaling.MathUtils.lerp
+import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
@@ -116,35 +117,30 @@ class MainPresenter(
     private val navigator: Navigator
 ) : Presenter<MainScreen.State> {
 
+    @Suppress("UNCHECKED_CAST")
     @Composable
     override fun present(): MainScreen.State {
-        /* ───────── 現在年月 (mutable) ───────── */
-        val today = remember { Calendar.getInstance() }
-        var currentYm by remember {
+        val today = rememberRetained { Calendar.getInstance() }
+        var currentYm by rememberRetained {
             mutableStateOf(YearMonth(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1))
         }
-        var transactionToDelete by remember { mutableStateOf<Transaction?>(null) }
+        var transactionToDelete by rememberRetained { mutableStateOf<Transaction?>(null) }
         val scope = rememberCoroutineScope()
 
-        /* ───────── produceState ───────── */
         val prefetchState by produceState(
             // 初期値
             initialValue = PrefetchState(emptyMap(), persistentListOf()),
-            key1 = currentYm                      // ← 年月が変わるたびに再実行
+            key1 = currentYm
         ) {
-            /* 1) 3 本ぶんの月リストを組み立て */
             val ymPrev = currentYm.shifted(-1)
             val ymNext = currentYm.shifted(+1)
 
-            /* 2) 全カテゴリーを 1 回だけ取る */
             val categoriesFlow = categoryRepository.getAllCategories()
 
-            /* 3) 各月の取引を Flow 3 本で取得 */
             val flows = listOf(ymPrev, currentYm, ymNext).associateWith { ym ->
                 transactionRepository.getTransactionsByMonth(ym.year, ym.month)
             }
 
-            /* 4) combine で同時購読 → サマリ計算 */
             combine(
                 *(flows.values + categoriesFlow).toTypedArray()
             ) { results ->
