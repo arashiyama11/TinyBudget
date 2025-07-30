@@ -23,7 +23,8 @@ data class OverlayUiState(
 
 class OverlayViewModel(
     private val categoryRepository: CategoryRepository,
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val stopSelf: () -> Unit,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OverlayUiState())
@@ -73,18 +74,19 @@ class OverlayViewModel(
     }
 
     fun close() {
-        _uiState.update { it.copy(closeOverlay = true) }
+        stopSelf()
     }
 }
 
 class OverlayViewModelFactory(
     private val categoryRepo: CategoryRepository,
-    private val transactionRepo: TransactionRepository
+    private val transactionRepo: TransactionRepository,
+    private val stopSelf: () -> Unit
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(OverlayViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return OverlayViewModel(categoryRepo, transactionRepo) as T
+            return OverlayViewModel(categoryRepo, transactionRepo, stopSelf) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

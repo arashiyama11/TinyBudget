@@ -96,7 +96,7 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
     private val overlayViewModel: OverlayViewModel by lazy {
         ViewModelProvider(
             this,
-            OverlayViewModelFactory(categoryRepository, transactionRepository)
+            OverlayViewModelFactory(categoryRepository, transactionRepository, ::stopSelf)
         )[OverlayViewModel::class.java]
     }
 
@@ -246,10 +246,14 @@ private fun DraggableOverlay(
     val context = LocalContext.current
     val screenW = remember { context.resources.displayMetrics.widthPixels.toFloat() }
     val screenH = remember { context.resources.displayMetrics.heightPixels.toFloat() }
-    var size by remember { mutableStateOf(DpSize(128.dp, 80.dp)) }
+    var size by remember { mutableStateOf(DpSize(160.dp, 200.dp)) }
     val minWidth = 64.dp
     val minHeight = 40.dp
     val density = LocalDensity.current
+
+    LaunchedEffect(size) {
+        Log.d("DraggableOverlay", "Size changed to: $size")
+    }
 
     TinyBudgetTheme {
         Surface(
