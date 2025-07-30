@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,7 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
@@ -71,6 +73,8 @@ import io.github.arashiyama11.tinybudget.ui.overlay.OverlayUi
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModel
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModelFactory
 import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegistryOwner,
     OnBackPressedDispatcherOwner {
@@ -128,12 +132,22 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
             Log.d("OverlayService", "Service is already running or started with invalid ID")
             return START_STICKY
         }
-        addOverlayComposeView()
+
+        // 設定を事前に読み込んでからUIを構築
+        lifecycleScope.launch {
+            val savedPosition = settingsRepository.overlayPosition.first()
+            val savedSize = settingsRepository.overlaySize.first()
+            addOverlayComposeView(savedPosition, savedSize)
+        }
+
         isRunning = true
         return START_STICKY
     }
 
-    private fun addOverlayComposeView() {
+    private fun addOverlayComposeView(
+        savedPosition: Pair<Float, Float>,
+        savedSize: Pair<Float, Float>
+    ) {
         val params = WindowManager.LayoutParams(
             WRAP_CONTENT,
             WRAP_CONTENT,
@@ -143,9 +157,10 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
+            // 初期位置は後でsettingsから読み込んだ値で更新される
             resources.displayMetrics.let { metrics ->
-                x = metrics.widthPixels
-                y = (metrics.heightPixels * 0.6).toInt()
+                x = savedPosition.first.toInt()
+                y = savedPosition.second.toInt()
             }
             softInputMode = WindowManager.LayoutParams
                 .SOFT_INPUT_STATE_ALWAYS_VISIBLE or
@@ -171,6 +186,9 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
                     windowManager = windowManager,
                     host = this,
                     lp = params,
+                    settingsRepository = settingsRepository,
+                    initialPosition = savedPosition,
+                    initialSize = savedSize,
                     onExit = {
                         stopSelf()
                     }
@@ -233,21 +251,57 @@ private fun DraggableOverlay(
     windowManager: WindowManager,
     host: ComposeView,
     lp: WindowManager.LayoutParams,
+    settingsRepository: SettingsRepository,
+    initialPosition: Pair<Float, Float>,
+    initialSize: Pair<Float, Float>,
     onExit: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    var offsetX by remember { mutableFloatStateOf(lp.x.toFloat()) }
-    var offsetY by remember { mutableFloatStateOf(lp.y.toFloat()) }
     val context = LocalContext.current
     val screenW = remember { context.resources.displayMetrics.widthPixels.toFloat() }
     val screenH = remember { context.resources.displayMetrics.heightPixels.toFloat() }
-    var size by remember { mutableStateOf(DpSize(160.dp, 200.dp)) }
+    val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
     val minWidth = 64.dp
     val minHeight = 40.dp
-    val density = LocalDensity.current
+    // サイズ上限を画面サイズの80%に設定
+    val maxWidth = remember { with(density) { (screenW * 0.8f).toDp() } }
+    val maxHeight = remember { with(density) { (screenH * 0.8f).toDp() } }
 
-    LaunchedEffect(size) {
-        Log.d("DraggableOverlay", "Size changed to: $size")
+    // 事前読み込みした設定値を使用してstate初期化
+    val initialValues = remember {
+        with(density) {
+            val constrainedWidth = initialSize.first.dp.coerceIn(minWidth, maxWidth)
+            val constrainedHeight = initialSize.second.dp.coerceIn(minHeight, maxHeight)
+
+            val offsetX = initialPosition.first.coerceIn(
+                0f,
+                (screenW - constrainedWidth.toPx()).coerceAtLeast(0f)
+            )
+            val offsetY = initialPosition.second.coerceIn(
+                0f,
+                (screenH - constrainedHeight.toPx()).coerceAtLeast(0f)
+            )
+
+            Triple(Pair(offsetX, offsetY), constrainedWidth, constrainedHeight)
+        }
+    }
+
+    var offsetX by remember { mutableFloatStateOf(initialValues.first.first) }
+    var offsetY by remember { mutableFloatStateOf(initialValues.first.second) }
+    var size by remember { mutableStateOf(DpSize(initialValues.second, initialValues.third)) }
+
+    // 初期値でWindowManagerのレイアウトを即座に更新
+    LaunchedEffect(Unit) {
+        with(density) {
+            lp.apply {
+                x = offsetX.toInt()
+                y = offsetY.toInt()
+                width = size.width.roundToPx()
+                height = size.height.roundToPx()
+            }
+            windowManager.updateViewLayout(host, lp)
+        }
     }
 
     TinyBudgetTheme {
@@ -255,7 +309,14 @@ private fun DraggableOverlay(
             modifier
                 .size(size)
                 .pointerInput(Unit) {
-                    detectDragGestures { change, drag ->
+                    detectDragGestures(
+                        onDragEnd = {
+                            // ドラッグ終了時に位置を保存
+                            coroutineScope.launch {
+                                settingsRepository.setOverlayPosition(offsetX, offsetY)
+                            }
+                        }
+                    ) { change, drag ->
                         change.consume()
                         offsetX = (offsetX + drag.x)
                             .coerceIn(0f, (screenW - size.width.toPx()))
@@ -295,22 +356,45 @@ private fun DraggableOverlay(
                         .size(24.dp)
                         .align(Alignment.BottomStart)
                         .pointerInput(Unit) {
-                            detectDragGestures { change, drag ->
+                            detectDragGestures(
+                                onDragEnd = {
+                                    // リサイズ終了時にサイズと位置を保存
+                                    coroutineScope.launch {
+                                        with(density) {
+                                            settingsRepository.setOverlaySize(
+                                                size.width.value,
+                                                size.height.value
+                                            )
+                                            settingsRepository.setOverlayPosition(offsetX, offsetY)
+                                        }
+                                    }
+                                }
+                            ) { change, drag ->
                                 change.consume()
                                 with(density) {
                                     val dx = drag.x.toDp()
                                     val dy = drag.y.toDp()
-                                    val newW = (size.width - dx).coerceAtLeast(minWidth)
-                                    val newH = (size.height + dy).coerceAtLeast(minHeight)
-                                    offsetX = (offsetX + drag.x).coerceIn(
+
+                                    // 新しいサイズを計算（制限を適用）
+                                    val newW = (size.width - dx).coerceIn(minWidth, maxWidth)
+                                    val newH = (size.height + dy).coerceIn(minHeight, maxHeight)
+
+                                    // 位置調整（左上を固定点として、サイズ変更時の位置補正）
+                                    val widthDiff = size.width - newW
+                                    val newOffsetX = (offsetX + widthDiff.toPx()).coerceIn(
                                         0f,
                                         (screenW - newW.toPx()).coerceAtLeast(0f)
                                     )
+
+                                    // 状態を更新
+                                    offsetX = newOffsetX
                                     size = DpSize(newW, newH)
+
+                                    // WindowManagerのレイアウトパラメータを更新
                                     lp.apply {
                                         width = newW.roundToPx()
                                         height = newH.roundToPx()
-                                        x = offsetX.toInt()
+                                        x = newOffsetX.toInt()
                                     }
                                     windowManager.updateViewLayout(host, lp)
                                 }
