@@ -10,10 +10,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +26,8 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.PermissionManager
+import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
+import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import io.github.arashiyama11.tinybudget.ui.theme.LocalSnackbarHostState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +58,7 @@ enum class PermissionPhase {
 
 class OnBoardingPresenter(
     private val navigator: Navigator,
-    private val permissionManager: PermissionManager
+    private val permissionManager: PermissionManager,
 ) : Presenter<OnBoardingScreen.State> {
 
     private val scope = CoroutineScope(Dispatchers.Main)
@@ -72,7 +72,10 @@ class OnBoardingPresenter(
             context: CircuitContext
         ): Presenter<*>? {
             return if (screen is OnBoardingScreen) {
-                OnBoardingPresenter(navigator = navigator, permissionManager = permissionManager)
+                OnBoardingPresenter(
+                    navigator = navigator,
+                    permissionManager = permissionManager,
+                )
             } else {
                 null
             }
@@ -203,6 +206,12 @@ fun OnBoardingUi(state: OnBoardingScreen.State, modifier: Modifier = Modifier) {
                         buttonText = "ユーザー補助機能を有効にする",
                         onButtonClick = { state.eventSink(OnBoardingScreen.Event.OnGrantAccessibilityClicked) }
                     )
+
+                    Button({
+                        state.eventSink(OnBoardingScreen.Event.OnCompleteClicked)
+                    }) {
+                        Text(text = "スキップ for debugging")
+                    }
                 }
 
                 PermissionPhase.Complete -> {

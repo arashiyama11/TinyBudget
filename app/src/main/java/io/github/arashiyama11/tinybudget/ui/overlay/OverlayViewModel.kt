@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class OverlayUiState(
-    val amount: Long = 0L, // StringからLongに変更
+    val amount: Long = 0L,
     val note: String = "",
     val categories: List<Category> = emptyList(),
     val selectedCategoryId: Int? = null,
@@ -24,7 +24,6 @@ data class OverlayUiState(
 class OverlayViewModel(
     private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
-    private val stopSelf: () -> Unit,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OverlayUiState())
@@ -68,25 +67,19 @@ class OverlayViewModel(
                         timestamp = System.currentTimeMillis()
                     )
                 )
-                close()
             }
         }
-    }
-
-    fun close() {
-        stopSelf()
     }
 }
 
 class OverlayViewModelFactory(
     private val categoryRepo: CategoryRepository,
     private val transactionRepo: TransactionRepository,
-    private val stopSelf: () -> Unit
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(OverlayViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return OverlayViewModel(categoryRepo, transactionRepo, stopSelf) as T
+            return OverlayViewModel(categoryRepo, transactionRepo) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

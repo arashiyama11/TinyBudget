@@ -96,7 +96,7 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
     private val overlayViewModel: OverlayViewModel by lazy {
         ViewModelProvider(
             this,
-            OverlayViewModelFactory(categoryRepository, transactionRepository, ::stopSelf)
+            OverlayViewModelFactory(categoryRepository, transactionRepository)
         )[OverlayViewModel::class.java]
     }
 
