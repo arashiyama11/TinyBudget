@@ -59,9 +59,6 @@ graph TD
         AccessibilityService
     end
 
-    subgraph "Application Class (DI Container)"
-        App["TinyBudgetApp"]
-    end
 
     Presenter -- "uses" --> Repository
     OverlayService -- "uses" --> Repository
