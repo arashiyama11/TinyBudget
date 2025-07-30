@@ -1,6 +1,7 @@
 package io.github.arashiyama11.tinybudget.ui.overlay
 
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.exponentialDecay
@@ -41,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
@@ -55,6 +57,14 @@ import kotlin.math.roundToLong
 @Composable
 fun OverlayUi(overlayViewModel: OverlayViewModel) {
     val uiState by overlayViewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // 保存完了トースト表示
+    LaunchedEffect(uiState.showSaveConfirmation) {
+        if (uiState.showSaveConfirmation) {
+            Toast.makeText(context, "保存しました", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Card(modifier = Modifier.padding(8.dp)) {
         // Card 内を高さいっぱいに使う
@@ -78,7 +88,8 @@ fun OverlayUi(overlayViewModel: OverlayViewModel) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    fontSize = 20.sp
+                    fontSize = 20.sp,
+                    sync = uiState.sync
                 )
 
                 CategorySelector(
@@ -126,7 +137,8 @@ private fun DialAmountInput(
     step: Long,
     onAmountChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    fontSize: TextUnit = 32.sp
+    fontSize: TextUnit = 32.sp,
+    sync: Boolean = false
 ) {
     var isDragging by remember { mutableStateOf(false) }
     val elevation by animateDpAsState(if (isDragging) 8.dp else 2.dp)
@@ -137,7 +149,11 @@ private fun DialAmountInput(
     val decay = exponentialDecay<Float>(frictionMultiplier = 1f)
 
     // 外部 amount が変わったら即同期
-
+    LaunchedEffect(amount) {
+        if (sync) {
+            animatable.snapTo(amount.toFloat())
+        }
+    }
 
     Surface(
         modifier = modifier.pointerInput(Unit) {

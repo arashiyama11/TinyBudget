@@ -65,20 +65,19 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import io.github.arashiyama11.tinybudget.data.local.database.AppDatabase
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
+import io.github.arashiyama11.tinybudget.data.repository.dataStore
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayUi
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModel
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModelFactory
 import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
-import kotlinx.coroutines.delay
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import kotlin.system.measureTimeMillis
 
 class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegistryOwner,
     OnBackPressedDispatcherOwner {
     private val appDatabase by lazy { AppDatabase.getDatabase(this) }
     private val categoryRepository by lazy { CategoryRepository(appDatabase.categoryDao()) }
     private val transactionRepository by lazy { TransactionRepository(appDatabase.transactionDao()) }
+    private val settingsRepository by lazy { SettingsRepository(dataStore) }
 
     private val _viewModelStore = ViewModelStore()
 
@@ -92,7 +91,7 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
     private val overlayViewModel: OverlayViewModel by lazy {
         ViewModelProvider(
             this,
-            OverlayViewModelFactory(categoryRepository, transactionRepository)
+            OverlayViewModelFactory(categoryRepository, transactionRepository, settingsRepository)
         )[OverlayViewModel::class.java]
     }
 

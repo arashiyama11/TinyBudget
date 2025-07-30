@@ -7,23 +7,29 @@ import io.github.arashiyama11.tinybudget.data.local.entity.Category
 import io.github.arashiyama11.tinybudget.data.local.entity.Transaction
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 data class OverlayUiState(
     val amount: Long = 0L,
     val note: String = "",
     val categories: List<Category> = emptyList(),
     val selectedCategoryId: Int? = null,
-    val closeOverlay: Boolean = false
+    val closeOverlay: Boolean = false,
+    val showSaveConfirmation: Boolean = false,
+    val sync: Boolean = false
 )
 
 class OverlayViewModel(
     private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OverlayUiState())
@@ -33,8 +39,24 @@ class OverlayViewModel(
 
     init {
         viewModelScope.launch {
+            // カテゴリ取得とデフォルトカテゴリ設定を並行実行
             categoryRepository.getAllCategories().collect { categories ->
                 _uiState.update { it.copy(categories = categories) }
+
+                // カテゴリ取得後にデフォルトカテゴリを設定
+                if (_uiState.value.selectedCategoryId == null && categories.isNotEmpty()) {
+                    // 最後に使用したカテゴリを優先、なければデフォルトカテゴリを使用
+                    val lastCategoryId = settingsRepository.lastCategoryId.first()
+                    val defaultCategoryId = settingsRepository.defaultCategoryId.first()
+
+                    val selectedId = when {
+                        lastCategoryId != null && categories.any { it.id == lastCategoryId } -> lastCategoryId
+                        defaultCategoryId != null && categories.any { it.id == defaultCategoryId } -> defaultCategoryId
+                        else -> categories.first().id
+                    }
+
+                    _uiState.update { it.copy(selectedCategoryId = selectedId) }
+                }
             }
         }
     }
@@ -50,6 +72,10 @@ class OverlayViewModel(
 
     fun onCategorySelected(categoryId: Int) {
         _uiState.update { it.copy(selectedCategoryId = categoryId) }
+        // 最後に選択したカテゴリを保存
+        viewModelScope.launch {
+            settingsRepository.setLastCategoryId(categoryId)
+        }
     }
 
     fun saveTransaction() {
@@ -67,6 +93,19 @@ class OverlayViewModel(
                         timestamp = System.currentTimeMillis()
                     )
                 )
+
+                _uiState.update {
+                    it.copy(
+                        amount = 0L,
+                        showSaveConfirmation = true,
+                        sync = true,
+                        note = ""
+                    )
+                }
+
+                // 一定時間後に通知状態をリセット
+                delay(500)
+                _uiState.update { it.copy(showSaveConfirmation = false, sync = false) }
             }
         }
     }
@@ -75,11 +114,12 @@ class OverlayViewModel(
 class OverlayViewModelFactory(
     private val categoryRepo: CategoryRepository,
     private val transactionRepo: TransactionRepository,
+    private val settingsRepo: SettingsRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(OverlayViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return OverlayViewModel(categoryRepo, transactionRepo) as T
+            return OverlayViewModel(categoryRepo, transactionRepo, settingsRepo) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
