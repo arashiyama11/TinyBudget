@@ -12,7 +12,6 @@ import com.slack.circuit.foundation.CircuitCompositionLocals
 import com.slack.circuit.foundation.NavigableCircuitContent
 import com.slack.circuit.foundation.rememberCircuitNavigator
 import io.github.arashiyama11.tinybudget.data.local.database.AppDatabase
-import io.github.arashiyama11.tinybudget.data.local.entity.Transaction
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import io.github.arashiyama11.tinybudget.ui.main.MainPresenter
@@ -21,6 +20,9 @@ import io.github.arashiyama11.tinybudget.ui.main.MainUi
 import io.github.arashiyama11.tinybudget.ui.main.OnBoardingPresenter
 import io.github.arashiyama11.tinybudget.ui.main.OnBoardingScreen
 import io.github.arashiyama11.tinybudget.ui.main.OnBoardingUi
+import io.github.arashiyama11.tinybudget.ui.main.SettingsPresenter
+import io.github.arashiyama11.tinybudget.ui.main.SettingsScreen
+import io.github.arashiyama11.tinybudget.ui.main.SettingsUi
 import io.github.arashiyama11.tinybudget.ui.theme.LocalSnackbarHostState
 import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
 
@@ -57,7 +59,12 @@ class MainActivity : AppCompatActivity() {
             )
             .addUi<MainScreen, MainScreen.State> { uiState, modifier ->
                 MainUi(uiState, modifier)
-            }.build()
+            }
+            .addPresenterFactory(SettingsPresenter.Factory())
+            .addUi<SettingsScreen, SettingsScreen.State> { uiState, modifier ->
+                SettingsUi(uiState, modifier)
+            }
+            .build()
 
         setContent {
             val backStack = rememberSaveableBackStack(root = OnBoardingScreen)

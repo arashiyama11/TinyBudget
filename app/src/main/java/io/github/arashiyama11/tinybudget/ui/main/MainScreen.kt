@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import androidx.compose.runtime.produceState
+import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.Amount
@@ -36,6 +37,7 @@ import io.github.arashiyama11.tinybudget.Transaction
 import io.github.arashiyama11.tinybudget.TransactionId
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import io.github.arashiyama11.tinybudget.ui.component.Footer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -57,13 +59,14 @@ data object MainScreen : Screen {
     ) : CircuitUiState
 
     sealed interface Event : CircuitUiEvent {
-
+        data class NavigateTo(val screen: Screen) : Event
     }
 }
 
 class MainPresenter(
     private val transactionRepository: TransactionRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val navigator: Navigator
 ) : Presenter<MainScreen.State> {
     @Composable
     override fun present(): MainScreen.State {
@@ -89,7 +92,11 @@ class MainPresenter(
             transactions = transactions,
             monthlySummaries = monthlySummaries,
         ) { event ->
-
+            when (event) {
+                is MainScreen.Event.NavigateTo -> {
+                    navigator.goTo(event.screen)
+                }
+            }
         }
     }
 
@@ -103,7 +110,7 @@ class MainPresenter(
             context: com.slack.circuit.runtime.CircuitContext
         ): Presenter<*>? {
             return if (screen is MainScreen) {
-                MainPresenter(transactionRepository, categoryRepository)
+                MainPresenter(transactionRepository, categoryRepository, navigator)
             } else {
                 null
             }
@@ -221,7 +228,14 @@ private fun TransactionListItem(transaction: Transaction, modifier: Modifier = M
 @Composable
 fun MainUi(state: MainScreen.State, modifier: Modifier) {
     Scaffold(
-        modifier = modifier
+        modifier = modifier,
+        bottomBar = {
+            Footer(
+                currentScreen = MainScreen, navigate = {
+                    state.eventSink(MainScreen.Event.NavigateTo(it))
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
