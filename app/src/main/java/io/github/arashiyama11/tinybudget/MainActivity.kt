@@ -12,14 +12,13 @@ import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.core.net.toUri
+import com.slack.circuit.foundation.Circuit
+import com.slack.circuit.foundation.CircuitCompositionLocals
+import com.slack.circuit.foundation.CircuitContent
+import io.github.arashiyama11.tinybudget.ui.main.MainPresenter
+import io.github.arashiyama11.tinybudget.ui.main.MainScreen
+import io.github.arashiyama11.tinybudget.ui.main.MainUi
 import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
 
 class MainActivity : AppCompatActivity() {
@@ -29,7 +28,8 @@ class MainActivity : AppCompatActivity() {
         if (Settings.canDrawOverlays(this)) {
             startOverlayService()
         } else {
-            Toast.makeText(this, "オーバーレイ権限が許可されませんでした", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "オーバーレイ権限が許可されませんでした", Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
@@ -46,16 +46,16 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val circuit = Circuit.Builder()
+            .addPresenter<MainScreen, MainScreen.State>(MainPresenter())
+            .addUi<MainScreen, MainScreen.State> { uiState, modifier ->
+                MainUi(uiState, modifier)
+            }.build()
+
         setContent {
             TinyBudgetTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Button(onClick = {
-                            checkAndRequestPermissions()
-                        }) {
-                            Text("Start OverlayService")
-                        }
-                    }
+                CircuitCompositionLocals(circuit) {
+                    CircuitContent(MainScreen)
                 }
             }
         }
@@ -97,7 +97,8 @@ class MainActivity : AppCompatActivity() {
         val target = AppLaunchAccessibilityService::class.java
         val am = context.getSystemService(ACCESSIBILITY_SERVICE) as AccessibilityManager
         // ユーザーが有効化している全サービスを取得
-        val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        val enabledServices =
+            am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
         return enabledServices.any { info ->
             val si = info.resolveInfo.serviceInfo
             si.packageName == context.packageName && si.name == target.name

@@ -52,7 +52,13 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.lifecycle.service)
     implementation(libs.androidx.appcompat)
+    implementation(libs.material.icons.extended)
+    implementation(libs.kotlinx.collections.immutable)
+
     implementation(libs.circuit.foundation)
+    //implementation(libs.circuit.codegen.annotations)
+
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
