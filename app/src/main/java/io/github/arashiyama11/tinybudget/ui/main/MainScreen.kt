@@ -1,12 +1,11 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
 import android.content.Intent
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,23 +14,34 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
-import androidx.compose.runtime.produceState
-import androidx.compose.ui.tooling.preview.Preview
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
@@ -44,12 +54,15 @@ import io.github.arashiyama11.tinybudget.Transaction
 import io.github.arashiyama11.tinybudget.TransactionId
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import io.github.arashiyama11.tinybudget.data.local.entity.Transaction as TransactionEntity
+import io.github.arashiyama11.tinybudget.data.local.entity.Category as CategoryEntity
 import io.github.arashiyama11.tinybudget.ui.component.Footer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -60,14 +73,21 @@ import java.util.Locale
 @Parcelize
 data object MainScreen : Screen {
     data class State(
+        val monthlySummary: MonthlySummary?,
         val transactions: ImmutableList<Transaction>,
-        val monthlySummaries: MonthlySummary,
+        val currentYear: Int,
+        val currentMonth: Int,
+        val transactionToDelete: Transaction? = null,
         val eventSink: (Event) -> Unit
     ) : CircuitUiState
 
     sealed interface Event : CircuitUiEvent {
         data class NavigateTo(val screen: Screen) : Event
         data class OnClickTransaction(val transaction: Transaction) : Event
+        data class ShowDeleteConfirmDialog(val transaction: Transaction) : Event
+        data class HideDeleteConfirmDialog(val transaction: Transaction) : Event
+        data class DeleteTransaction(val transaction: Transaction) : Event
+        data class ChangeMonth(val delta: Int) : Event
     }
 }
 
@@ -79,26 +99,37 @@ class MainPresenter(
     @Composable
     override fun present(): MainScreen.State {
         val cal = Calendar.getInstance()
-        val year = cal.get(Calendar.YEAR)
-        val month = cal.get(Calendar.MONTH) + 1
+        var currentYear by remember { mutableStateOf(cal.get(Calendar.YEAR)) }
+        var currentMonth by remember { mutableStateOf(cal.get(Calendar.MONTH) + 1) }
+        var transactionToDelete by remember { mutableStateOf<Transaction?>(null) }
+        val scope = rememberCoroutineScope()
 
-        val transactions by produceState<ImmutableList<Transaction>>(initialValue = persistentListOf()) {
+        val state by produceState(
+            initialValue = Pair(null, persistentListOf()),
+            key1 = currentYear,
+            key2 = currentMonth
+        ) {
             val categoriesFlow = categoryRepository.getAllCategories()
-            val transactionsFlow = transactionRepository.getTransactionsByMonth(year, month)
+            val transactionsFlow =
+                transactionRepository.getTransactionsByMonth(currentYear, currentMonth)
 
-            combine(transactionsFlow, categoriesFlow) { transactions, categories ->
+            combine(transactionsFlow, categoriesFlow) { transactionEntities, categories ->
                 val categoryMap = categories.associateBy { it.id }
-                transactions.map { transaction ->
+                val uiTransactions = transactionEntities.map { transaction ->
                     transaction.toUiModel(categoryMap[transaction.categoryId])
                 }.toImmutableList()
+                val summary = uiTransactions.toMonthlySummary(currentYear, currentMonth)
+                Pair(summary, uiTransactions)
             }.collect { value = it }
         }
-
-        val monthlySummaries = transactions.toMonthlySummary(year, month)
+        val (monthlySummary, transactions) = state
 
         return MainScreen.State(
+            monthlySummary = monthlySummary,
             transactions = transactions,
-            monthlySummaries = monthlySummaries,
+            currentYear = currentYear,
+            currentMonth = currentMonth,
+            transactionToDelete = transactionToDelete,
         ) { event ->
             when (event) {
                 is MainScreen.Event.NavigateTo -> {
@@ -107,6 +138,31 @@ class MainPresenter(
 
                 is MainScreen.Event.OnClickTransaction -> {
                     navigator.goTo(EditTransactionScreen(event.transaction))
+                }
+
+                is MainScreen.Event.ShowDeleteConfirmDialog -> {
+                    transactionToDelete = event.transaction
+                }
+
+                is MainScreen.Event.HideDeleteConfirmDialog -> {
+                    transactionToDelete = null
+                }
+
+                is MainScreen.Event.DeleteTransaction -> {
+                    scope.launch {
+                        transactionRepository.deleteTransaction(event.transaction.toEntity())
+                        transactionToDelete = null
+                    }
+                }
+
+                is MainScreen.Event.ChangeMonth -> {
+                    val newCal = Calendar.getInstance().apply {
+                        set(Calendar.YEAR, currentYear)
+                        set(Calendar.MONTH, currentMonth - 1)
+                        add(Calendar.MONTH, event.delta)
+                    }
+                    currentYear = newCal.get(Calendar.YEAR)
+                    currentMonth = newCal.get(Calendar.MONTH) + 1
                 }
             }
         }
@@ -119,7 +175,7 @@ class MainPresenter(
         override fun create(
             screen: Screen,
             navigator: Navigator,
-            context: com.slack.circuit.runtime.CircuitContext
+            context: CircuitContext
         ): Presenter<*>? {
             return if (screen is MainScreen) {
                 MainPresenter(transactionRepository, categoryRepository, navigator)
@@ -150,8 +206,8 @@ private fun List<Transaction>.toMonthlySummary(
     )
 }
 
-private fun io.github.arashiyama11.tinybudget.data.local.entity.Transaction.toUiModel(
-    category: io.github.arashiyama11.tinybudget.data.local.entity.Category?
+private fun TransactionEntity.toUiModel(
+    category: CategoryEntity?
 ): Transaction {
     return Transaction(
         id = TransactionId(id.toString()),
@@ -165,33 +221,67 @@ private fun io.github.arashiyama11.tinybudget.data.local.entity.Transaction.toUi
     )
 }
 
+private fun Transaction.toEntity(): TransactionEntity {
+    return TransactionEntity(
+        id = this.id.value.toInt(),
+        amount = this.amount.value,
+        categoryId = this.category.id.value.toInt(),
+        note = this.note,
+        timestamp = this.date
+    )
+}
+
 @Composable
-private fun MonthlySummaryCard(summary: MonthlySummary, modifier: Modifier = Modifier) {
+private fun MonthlySummaryCard(
+    summary: MonthlySummary?,
+    year: Int,
+    month: Int,
+    modifier: Modifier = Modifier,
+    onMonthChange: (Int) -> Unit
+) {
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "${summary.year}/${summary.month}",
-                style = MaterialTheme.typography.headlineMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Total: ${summary.totalAmount.value} JPY",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "By Category:",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            summary.categoryWiseAmounts.forEach { (category, amount) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = category.name)
-                    Text(text = "${amount.value} JPY")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = { onMonthChange(-1) }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Previous month")
                 }
+                Text(
+                    text = "$year/$month",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                IconButton(onClick = { onMonthChange(1) }) {
+                    Icon(Icons.Default.ArrowForward, contentDescription = "Next month")
+                }
+            }
+
+            if (summary != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Total: ${summary.totalAmount.value} JPY",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "By Category:",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                summary.categoryWiseAmounts.forEach { (category, amount) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = category.name)
+                        Text(text = "${amount.value} JPY")
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "No data for this month.", style = MaterialTheme.typography.bodyLarge)
             }
         }
     }
@@ -205,9 +295,15 @@ private fun TransactionList(
 ) {
     LazyColumn(modifier = modifier) {
         items(transactions) { transaction ->
-            TransactionListItem(transaction = transaction, onClick = {
-                eventSink(MainScreen.Event.OnClickTransaction(it))
-            })
+            TransactionListItem(
+                transaction = transaction,
+                onClick = {
+                    eventSink(MainScreen.Event.OnClickTransaction(it))
+                },
+                onLongClick = {
+                    eventSink(MainScreen.Event.ShowDeleteConfirmDialog(it))
+                }
+            )
             HorizontalDivider()
         }
     }
@@ -217,13 +313,19 @@ private fun TransactionList(
 private fun TransactionListItem(
     transaction: Transaction,
     modifier: Modifier = Modifier,
-    onClick: (Transaction) -> Unit
+    onClick: (Transaction) -> Unit,
+    onLongClick: (Transaction) -> Unit
 ) {
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick(transaction) }
-            .padding(vertical = 8.dp),
+          .fillMaxWidth()
+          .pointerInput(Unit) {
+            detectTapGestures(
+              onTap = { onClick(transaction) },
+              onLongPress = { onLongClick(transaction) }
+            )
+          }
+          .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -257,6 +359,19 @@ private fun TransactionListItem(
 @Composable
 fun MainUi(state: MainScreen.State, modifier: Modifier) {
     val context = LocalContext.current
+
+    if (state.transactionToDelete != null) {
+        DeleteConfirmationDialog(
+            transaction = state.transactionToDelete,
+            onConfirm = {
+                state.eventSink(MainScreen.Event.DeleteTransaction(it))
+            },
+            onDismiss = {
+                state.eventSink(MainScreen.Event.HideDeleteConfirmDialog(it))
+            }
+        )
+    }
+
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
@@ -277,16 +392,46 @@ fun MainUi(state: MainScreen.State, modifier: Modifier) {
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
+              .padding(paddingValues)
+              .padding(horizontal = 16.dp)
         ) {
-            MonthlySummaryCard(summary = state.monthlySummaries)
+            MonthlySummaryCard(
+                summary = state.monthlySummary,
+                year = state.currentYear,
+                month = state.currentMonth,
+                onMonthChange = { delta ->
+                    state.eventSink(MainScreen.Event.ChangeMonth(delta))
+                }
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = "Transactions", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
             TransactionList(transactions = state.transactions, eventSink = state.eventSink)
         }
     }
+}
+
+@Composable
+private fun DeleteConfirmationDialog(
+    transaction: Transaction,
+    onConfirm: (Transaction) -> Unit,
+    onDismiss: (Transaction) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { onDismiss(transaction) },
+        title = { Text("Delete Transaction") },
+        text = { Text("Are you sure you want to delete this transaction?") },
+        confirmButton = {
+            Button(onClick = { onConfirm(transaction) }) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            Button(onClick = { onDismiss(transaction) }) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -299,5 +444,9 @@ fun TransactionItemPreview() {
         category = Category(id = CategoryId("1"), name = "Food"),
         note = "メモだよー"
     )
-    TransactionListItem(transaction = transaction, onClick = {})
+    TransactionListItem(
+        transaction = transaction,
+        onClick = {},
+        onLongClick = {}
+    )
 }
