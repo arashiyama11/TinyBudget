@@ -1,6 +1,7 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
 import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +11,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -60,6 +64,7 @@ data object MainScreen : Screen {
 
     sealed interface Event : CircuitUiEvent {
         data class NavigateTo(val screen: Screen) : Event
+        data class OnClickTransaction(val transaction: Transaction) : Event
     }
 }
 
@@ -95,6 +100,10 @@ class MainPresenter(
             when (event) {
                 is MainScreen.Event.NavigateTo -> {
                     navigator.goTo(event.screen)
+                }
+
+                is MainScreen.Event.OnClickTransaction -> {
+                    navigator.goTo(EditTransactionScreen(event.transaction))
                 }
             }
         }
@@ -188,21 +197,29 @@ private fun MonthlySummaryCard(summary: MonthlySummary, modifier: Modifier = Mod
 @Composable
 private fun TransactionList(
     transactions: ImmutableList<Transaction>,
+    eventSink: (MainScreen.Event) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(modifier = modifier) {
         items(transactions) { transaction ->
-            TransactionListItem(transaction = transaction)
+            TransactionListItem(transaction = transaction, onClick = {
+                eventSink(MainScreen.Event.OnClickTransaction(it))
+            })
             HorizontalDivider()
         }
     }
 }
 
 @Composable
-private fun TransactionListItem(transaction: Transaction, modifier: Modifier = Modifier) {
+private fun TransactionListItem(
+    transaction: Transaction,
+    modifier: Modifier = Modifier,
+    onClick: (Transaction) -> Unit
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .clickable { onClick(transaction) }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -227,8 +244,17 @@ private fun TransactionListItem(transaction: Transaction, modifier: Modifier = M
 
 @Composable
 fun MainUi(state: MainScreen.State, modifier: Modifier) {
+    val context = LocalContext.current
     Scaffold(
         modifier = modifier,
+        floatingActionButton = {
+            FloatingActionButton(onClick = {
+                val intent = Intent(context, OverlayService::class.java)
+                context.startForegroundService(intent)
+            }) {
+                Icon(Icons.Filled.Add, contentDescription = "支出を記録する")
+            }
+        },
         bottomBar = {
             Footer(
                 currentScreen = MainScreen, navigate = {
@@ -246,16 +272,7 @@ fun MainUi(state: MainScreen.State, modifier: Modifier) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = "Transactions", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
-            TransactionList(transactions = state.transactions)
-
-            val context = LocalContext.current
-
-            Button({
-                val intent = Intent(context, OverlayService::class.java)
-                context.startForegroundService(intent)
-            }) {
-                Text("launch overlay")
-            }
+            TransactionList(transactions = state.transactions, eventSink = state.eventSink)
         }
     }
 }

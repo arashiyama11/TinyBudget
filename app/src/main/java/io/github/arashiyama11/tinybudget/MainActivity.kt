@@ -23,6 +23,9 @@ import io.github.arashiyama11.tinybudget.ui.main.OnBoardingUi
 import io.github.arashiyama11.tinybudget.ui.main.SettingsPresenter
 import io.github.arashiyama11.tinybudget.ui.main.SettingsScreen
 import io.github.arashiyama11.tinybudget.ui.main.SettingsUi
+import io.github.arashiyama11.tinybudget.ui.main.EditTransactionPresenter
+import io.github.arashiyama11.tinybudget.ui.main.EditTransactionScreen
+import io.github.arashiyama11.tinybudget.ui.main.EditTransactionUi
 import io.github.arashiyama11.tinybudget.ui.theme.LocalSnackbarHostState
 import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
 
@@ -63,6 +66,10 @@ class MainActivity : AppCompatActivity() {
             .addPresenterFactory(SettingsPresenter.Factory())
             .addUi<SettingsScreen, SettingsScreen.State> { uiState, modifier ->
                 SettingsUi(uiState, modifier)
+            }
+            .addPresenterFactory(EditTransactionPresenter.Factory(transactionRepository))
+            .addUi<EditTransactionScreen, EditTransactionScreen.State> { uiState, modifier ->
+                EditTransactionUi(uiState, modifier)
             }
             .build()
 
