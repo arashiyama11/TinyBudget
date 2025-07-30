@@ -3,6 +3,7 @@ package io.github.arashiyama11.tinybudget.ui.overlay
 import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -38,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -49,10 +51,15 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arashiyama11.tinybudget.data.local.entity.Category
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.roundToLong
+
 
 @Composable
 fun OverlayUi(overlayViewModel: OverlayViewModel) {
@@ -150,9 +157,14 @@ private fun DialAmountInput(
 
     // 外部 amount が変わったら即同期
     LaunchedEffect(amount) {
+        animatable
         if (sync) {
             animatable.snapTo(amount.toFloat())
         }
+    }
+
+    LaunchedEffect(Unit) {
+        animatable.asStateFlow(scope).collect { onAmountChange(it.roundToLong()) }
     }
 
     Surface(
@@ -171,11 +183,6 @@ private fun DialAmountInput(
                     scope.launch {
                         val next = (animatable.value - delta).coerceAtLeast(0f)
                         animatable.snapTo(next)
-                        // ← ここでリアルタイムに ViewModel 側の amount を更新
-                        val interimStep = (next / step)
-                            .roundToLong()
-                            .coerceAtLeast(0L) * step
-                        onAmountChange(interimStep)
                     }
                 },
                 onDragEnd = {
@@ -267,3 +274,14 @@ private fun CategorySelector(
         }
     }
 }
+
+
+fun <T, V : AnimationVector> Animatable<T, V>.asStateFlow(
+    scope: CoroutineScope
+) = snapshotFlow { this.value }
+    .distinctUntilChanged()
+    .stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = this.value
+    )

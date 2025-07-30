@@ -62,7 +62,7 @@ class OverlayViewModel(
     }
 
     fun onAmountChange(newAmount: Long) {
-        val finalAmount = if (newAmount < 0) 0 else newAmount
+        val finalAmount = if (newAmount < 0) 0L else (newAmount / amountStep) * amountStep
         _uiState.update { it.copy(amount = finalAmount) }
     }
 
