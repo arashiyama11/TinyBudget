@@ -26,8 +26,6 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.PermissionManager
-import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
-import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import io.github.arashiyama11.tinybudget.ui.theme.LocalSnackbarHostState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

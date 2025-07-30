@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -106,7 +106,7 @@ class MainPresenter(
     ) : Presenter.Factory {
         override fun create(
             screen: Screen,
-            navigator: com.slack.circuit.runtime.Navigator,
+            navigator: Navigator,
             context: com.slack.circuit.runtime.CircuitContext
         ): Presenter<*>? {
             return if (screen is MainScreen) {
@@ -193,7 +193,7 @@ private fun TransactionList(
     LazyColumn(modifier = modifier) {
         items(transactions) { transaction ->
             TransactionListItem(transaction = transaction)
-            Divider()
+            HorizontalDivider()
         }
     }
 }
