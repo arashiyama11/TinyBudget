@@ -11,6 +11,10 @@ import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.foundation.CircuitCompositionLocals
 import com.slack.circuit.foundation.NavigableCircuitContent
 import com.slack.circuit.foundation.rememberCircuitNavigator
+import io.github.arashiyama11.tinybudget.data.local.database.AppDatabase
+import io.github.arashiyama11.tinybudget.data.local.entity.Transaction
+import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
+import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import io.github.arashiyama11.tinybudget.ui.main.MainPresenter
 import io.github.arashiyama11.tinybudget.ui.main.MainScreen
 import io.github.arashiyama11.tinybudget.ui.main.MainUi
@@ -23,6 +27,9 @@ import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
 class MainActivity : AppCompatActivity() {
 
     private val permissionManager by lazy { PermissionManager(this) }
+    private val appDatabase by lazy { AppDatabase.getDatabase(this) }
+    private val categoryRepository by lazy { CategoryRepository(appDatabase.categoryDao()) }
+    private val transactionRepository by lazy { TransactionRepository(appDatabase.transactionDao()) }
 
     override fun onResume() {
         super.onResume()
