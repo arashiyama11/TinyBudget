@@ -1,10 +1,13 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -147,21 +150,26 @@ fun EditTransactionUi(state: EditTransactionScreen.State, modifier: Modifier) {
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = {
-                val updatedTransaction = state.transaction.copy(
-                    amount = Amount(amount.toLong()),
-                    category = state.transaction.category.copy(name = category),
-                    note = note
-                )
-                state.eventSink(EditTransactionScreen.Event.UpdateTransaction(updatedTransaction))
-            }) {
-                Text("更新")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = {
-                state.eventSink(EditTransactionScreen.Event.DeleteTransaction(state.transaction))
-            }) {
-                Text("削除")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(onClick = {
+                    val updatedTransaction = state.transaction.copy(
+                        amount = Amount(amount.toLong()),
+                        category = state.transaction.category.copy(name = category),
+                        note = note
+                    )
+                    state.eventSink(EditTransactionScreen.Event.UpdateTransaction(updatedTransaction))
+                }) {
+                    Text("更新")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = {
+                    state.eventSink(EditTransactionScreen.Event.DeleteTransaction(state.transaction))
+                }) {
+                    Text("削除")
+                }
             }
         }
     }
