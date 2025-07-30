@@ -1,5 +1,6 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
@@ -20,7 +22,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startForegroundService
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.presenter.Presenter
@@ -29,6 +33,7 @@ import io.github.arashiyama11.tinybudget.Amount
 import io.github.arashiyama11.tinybudget.Category
 import io.github.arashiyama11.tinybudget.CategoryId
 import io.github.arashiyama11.tinybudget.MonthlySummary
+import io.github.arashiyama11.tinybudget.OverlayService
 import io.github.arashiyama11.tinybudget.Transaction
 import io.github.arashiyama11.tinybudget.TransactionId
 import kotlinx.collections.immutable.ImmutableList
@@ -212,6 +217,15 @@ fun MainUi(state: MainScreen.State, modifier: Modifier) {
             Text(text = "Transactions", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
             TransactionList(transactions = state.transactions)
+
+            val context = LocalContext.current
+
+            Button({
+                val intent = Intent(context, OverlayService::class.java)
+                context.startForegroundService(intent)
+            }) {
+                Text("launch overlay")
+            }
         }
     }
 }
