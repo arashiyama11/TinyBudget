@@ -67,7 +67,12 @@ class MainActivity : AppCompatActivity() {
             .addUi<SettingsScreen, SettingsScreen.State> { uiState, modifier ->
                 SettingsUi(uiState, modifier)
             }
-            .addPresenterFactory(EditTransactionPresenter.Factory(transactionRepository))
+            .addPresenterFactory(
+                EditTransactionPresenter.Factory(
+                    transactionRepository,
+                    categoryRepository
+                )
+            )
             .addUi<EditTransactionScreen, EditTransactionScreen.State> { uiState, modifier ->
                 EditTransactionUi(uiState, modifier)
             }

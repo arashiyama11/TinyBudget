@@ -1,6 +1,7 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,9 +9,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,11 +25,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.runtime.CircuitContext
@@ -33,8 +42,11 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.Amount
+import io.github.arashiyama11.tinybudget.Category
+import io.github.arashiyama11.tinybudget.CategoryId
 import io.github.arashiyama11.tinybudget.Transaction
 import io.github.arashiyama11.tinybudget.toEntity
+import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
@@ -43,6 +55,7 @@ import kotlinx.parcelize.Parcelize
 data class EditTransactionScreen(val transaction: Transaction) : Screen {
     data class State(
         val transaction: Transaction,
+        val categories: List<Category>,
         val eventSink: (Event) -> Unit
     ) : CircuitUiState
 
@@ -56,13 +69,18 @@ data class EditTransactionScreen(val transaction: Transaction) : Screen {
 class EditTransactionPresenter(
     private val navigator: Navigator,
     private val screen: EditTransactionScreen,
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val categoryRepository: CategoryRepository
 ) : Presenter<EditTransactionScreen.State> {
     @Composable
     override fun present(): EditTransactionScreen.State {
         val scope = rememberCoroutineScope()
+        val categories by categoryRepository.getAllCategories()
+            .collectAsState(initial = emptyList())
+
         return EditTransactionScreen.State(
-            transaction = screen.transaction
+            transaction = screen.transaction,
+            categories = categories.map { Category(CategoryId(it.id.toString()), it.name, true) }
         ) { event ->
             when (event) {
                 is EditTransactionScreen.Event.GoBack -> navigator.pop()
@@ -84,7 +102,8 @@ class EditTransactionPresenter(
     }
 
     class Factory(
-        private val transactionRepository: TransactionRepository
+        private val transactionRepository: TransactionRepository,
+        private val categoryRepository: CategoryRepository
     ) : Presenter.Factory {
         override fun create(
             screen: Screen,
@@ -95,7 +114,8 @@ class EditTransactionPresenter(
                 is EditTransactionScreen -> EditTransactionPresenter(
                     navigator,
                     screen,
-                    transactionRepository
+                    transactionRepository,
+                    categoryRepository
                 )
 
                 else -> null
@@ -108,8 +128,9 @@ class EditTransactionPresenter(
 @Composable
 fun EditTransactionUi(state: EditTransactionScreen.State, modifier: Modifier) {
     var amount by remember { mutableStateOf(state.transaction.amount.value.toString()) }
-    var category by remember { mutableStateOf(state.transaction.category.name) }
+    var selectedCategory by remember { mutableStateOf(state.transaction.category) }
     var note by remember { mutableStateOf(state.transaction.note) }
+    var categoryDropdownExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -136,12 +157,53 @@ fun EditTransactionUi(state: EditTransactionScreen.State, modifier: Modifier) {
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = category,
-                onValueChange = { category = it },
-                label = { Text("カテゴリ") },
-                modifier = Modifier.fillMaxWidth()
-            )
+
+            // カテゴリ選択ドロップダウン
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = selectedCategory.name,
+                    onValueChange = { },
+                    label = { Text("カテゴリ") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    trailingIcon = {
+                        Box {
+                            IconButton(onClick = { categoryDropdownExpanded = true }) {
+                                Icon(
+                                    Icons.Default.ArrowDropDown,
+                                    contentDescription = "カテゴリを選択"
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = categoryDropdownExpanded,
+                                onDismissRequest = { categoryDropdownExpanded = false },
+                            ) {
+                                state.categories.filter { it.isEnabled }.forEach { category ->
+                                    DropdownMenuItem(
+                                        text = { Text(category.name) },
+                                        onClick = {
+                                            selectedCategory = category
+                                            categoryDropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    interactionSource = remember { MutableInteractionSource() }
+                        .also { interactionSource ->
+                            LaunchedEffect(interactionSource) {
+                                interactionSource.interactions.collect { interaction ->
+                                    if (interaction is PressInteraction.Press) {
+                                        categoryDropdownExpanded = true
+                                    }
+                                }
+                            }
+                        }
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = note,
@@ -157,7 +219,7 @@ fun EditTransactionUi(state: EditTransactionScreen.State, modifier: Modifier) {
                 Button(onClick = {
                     val updatedTransaction = state.transaction.copy(
                         amount = Amount(amount.toLong()),
-                        category = state.transaction.category.copy(name = category),
+                        category = selectedCategory,
                         note = note
                     )
                     state.eventSink(EditTransactionScreen.Event.UpdateTransaction(updatedTransaction))
