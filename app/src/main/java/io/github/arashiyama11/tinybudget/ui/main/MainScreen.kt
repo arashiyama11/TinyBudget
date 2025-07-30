@@ -109,6 +109,20 @@ class MainPresenter() : Presenter<MainScreen.State> {
         ) { event ->
         }
     }
+
+    class Factory : Presenter.Factory {
+        override fun create(
+            screen: Screen,
+            navigator: com.slack.circuit.runtime.Navigator,
+            context: com.slack.circuit.runtime.CircuitContext
+        ): Presenter<*>? {
+            return if (screen is MainScreen) {
+                MainPresenter()
+            } else {
+                null
+            }
+        }
+    }
 }
 
 @Composable
