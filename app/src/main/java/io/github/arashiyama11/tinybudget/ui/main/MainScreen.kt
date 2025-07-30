@@ -18,15 +18,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat.startForegroundService
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
+import androidx.compose.runtime.produceState
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.Amount
@@ -36,11 +34,16 @@ import io.github.arashiyama11.tinybudget.MonthlySummary
 import io.github.arashiyama11.tinybudget.OverlayService
 import io.github.arashiyama11.tinybudget.Transaction
 import io.github.arashiyama11.tinybudget.TransactionId
+import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
+import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.flow.combine
 import kotlinx.parcelize.Parcelize
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -58,76 +61,89 @@ data object MainScreen : Screen {
     }
 }
 
-class MainPresenter() : Presenter<MainScreen.State> {
-    private val mockTransactions = persistentListOf(
-        Transaction(
-            id = TransactionId("1"),
-            amount = Amount(1500),
-            date = 1696118400000, // Example timestamp
-            category = Category(
-                id = CategoryId("1"),
-                name = "Food"
-            ),
-            note = "Lunch at restaurant"
-        ),
-        Transaction(
-            id = TransactionId("2"),
-            amount = Amount(8500),
-            date = 1696204800000, // Example timestamp
-            category = Category(
-                id = CategoryId("2"),
-                name = "Other Expenses"
-            ),
-            note = "Grocery shopping"
-        )
-    )
-
-    private val mockCategoryWiseAmounts = persistentMapOf(
-        Category(
-            id = CategoryId("1"),
-            name = "Food"
-        ) to Amount(1500),
-        Category(
-            id = CategoryId("2"),
-            name = "Other Expenses"
-        ) to Amount(8500)
-    )
-    private val mockMonthlySummary = MonthlySummary(
-        year = 2023,
-        month = 10,
-        totalAmount = Amount(10000),
-        categoryWiseAmounts = mockCategoryWiseAmounts,
-        transactions = mockTransactions
-    )
-
+class MainPresenter(
+    private val transactionRepository: TransactionRepository,
+    private val categoryRepository: CategoryRepository
+) : Presenter<MainScreen.State> {
     @Composable
     override fun present(): MainScreen.State {
-        val transactions by remember { mutableStateOf(mockTransactions) }
-        val monthlySummaries by remember {
-            mutableStateOf(
-                mockMonthlySummary
-            )
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH) + 1
+
+        val transactions by produceState<ImmutableList<Transaction>>(initialValue = persistentListOf()) {
+            val categoriesFlow = categoryRepository.getAllCategories()
+            val transactionsFlow = transactionRepository.getTransactionsByMonth(year, month)
+
+            combine(transactionsFlow, categoriesFlow) { transactions, categories ->
+                val categoryMap = categories.associateBy { it.id }
+                transactions.map { transaction ->
+                    transaction.toUiModel(categoryMap[transaction.categoryId])
+                }.toImmutableList()
+            }.collect { value = it }
         }
+
+        val monthlySummaries = transactions.toMonthlySummary(year, month)
+
         return MainScreen.State(
             transactions = transactions,
             monthlySummaries = monthlySummaries,
         ) { event ->
+
         }
     }
 
-    class Factory : Presenter.Factory {
+    class Factory(
+        private val transactionRepository: TransactionRepository,
+        private val categoryRepository: CategoryRepository
+    ) : Presenter.Factory {
         override fun create(
             screen: Screen,
             navigator: com.slack.circuit.runtime.Navigator,
             context: com.slack.circuit.runtime.CircuitContext
         ): Presenter<*>? {
             return if (screen is MainScreen) {
-                MainPresenter()
+                MainPresenter(transactionRepository, categoryRepository)
             } else {
                 null
             }
         }
     }
+}
+
+private fun List<Transaction>.toMonthlySummary(
+    year: Int,
+    month: Int
+): MonthlySummary {
+    val totalAmount = Amount(sumOf { it.amount.value })
+    val categoryWiseAmounts = this
+        .groupBy { it.category }
+        .mapValues { (_, transactions) ->
+            Amount(transactions.sumOf { it.amount.value })
+        }
+        .toImmutableMap()
+    return MonthlySummary(
+        year = year,
+        month = month,
+        totalAmount = totalAmount,
+        categoryWiseAmounts = categoryWiseAmounts,
+        transactions = this.toImmutableList()
+    )
+}
+
+private fun io.github.arashiyama11.tinybudget.data.local.entity.Transaction.toUiModel(
+    category: io.github.arashiyama11.tinybudget.data.local.entity.Category?
+): Transaction {
+    return Transaction(
+        id = TransactionId(id.toString()),
+        amount = Amount(amount),
+        date = timestamp,
+        category = Category(
+            id = CategoryId(categoryId.toString()),
+            name = category?.name ?: "Unknown"
+        ),
+        note = note
+    )
 }
 
 @Composable

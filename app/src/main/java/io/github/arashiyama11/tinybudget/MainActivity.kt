@@ -41,11 +41,20 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val circuit = Circuit.Builder()
-            .addPresenterFactory(OnBoardingPresenter.Factory(permissionManager))
+            .addPresenterFactory(
+                OnBoardingPresenter.Factory(
+                    permissionManager,
+                )
+            )
             .addUi<OnBoardingScreen, OnBoardingScreen.State> { uiState, modifier ->
                 OnBoardingUi(uiState, modifier)
             }
-            .addPresenterFactory(MainPresenter.Factory())
+            .addPresenterFactory(
+                MainPresenter.Factory(
+                    transactionRepository,
+                    categoryRepository
+                )
+            )
             .addUi<MainScreen, MainScreen.State> { uiState, modifier ->
                 MainUi(uiState, modifier)
             }.build()

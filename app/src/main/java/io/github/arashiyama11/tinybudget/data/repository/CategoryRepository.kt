@@ -10,6 +10,10 @@ class CategoryRepository(private val categoryDao: CategoryDao) {
         return categoryDao.getAll()
     }
 
+    suspend fun getCategory(id: Int): Category? {
+        return categoryDao.findById(id)
+    }
+
     suspend fun addCategory(category: Category) {
         categoryDao.insert(category)
     }
