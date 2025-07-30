@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
@@ -53,20 +54,37 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import io.github.arashiyama11.tinybudget.data.local.database.AppDatabase
+import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
+import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import io.github.arashiyama11.tinybudget.ui.overlay.OverlayUi
+import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModel
+import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModelFactory
 import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.system.measureTimeMillis
 
-class OverlayService: LifecycleService(), ViewModelStoreOwner, SavedStateRegistryOwner{
-    private val _viewModelStore = ViewModelStore()
+class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegistryOwner {
+    private val appDatabase by lazy { AppDatabase.getDatabase(this) }
+    private val categoryRepository by lazy { CategoryRepository(appDatabase.categoryDao()) }
+    private val transactionRepository by lazy { TransactionRepository(appDatabase.transactionDao()) }
+
+    private val _viewModelStore = ViewModelStore().apply {
+    }
     override val viewModelStore: ViewModelStore = _viewModelStore
     private val savedStateRegistryController =
         SavedStateRegistryController.create(this)
 
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateRegistryController.savedStateRegistry
+
+    private val overlayViewModel: OverlayViewModel by lazy {
+        ViewModelProvider(this, OverlayViewModelFactory(categoryRepository, transactionRepository))
+            .get(OverlayViewModel::class.java)
+    }
+
 
     companion object {
         private const val CHANNEL_ID = "overlay_service_channel"
@@ -91,7 +109,7 @@ class OverlayService: LifecycleService(), ViewModelStoreOwner, SavedStateRegistr
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        if(isRunning){
+        if (isRunning) {
             Log.d("OverlayService", "Service is already running or started with invalid ID")
             return START_STICKY
         }
@@ -132,17 +150,15 @@ class OverlayService: LifecycleService(), ViewModelStoreOwner, SavedStateRegistr
                     onExit = {
                         stopSelf()
                     }
-                ){
-                    Box(modifier = Modifier.fillMaxSize(),contentAlignment = Alignment.Center) {
-                        CurrentTimeText()
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        OverlayUi(overlayViewModel)
                     }
                 }
             }
         }
         windowManager.addView(composeView, params)
     }
-
-
 
 
     private fun buildNotification(): Notification {
@@ -179,6 +195,7 @@ class OverlayService: LifecycleService(), ViewModelStoreOwner, SavedStateRegistr
         if (this::composeView.isInitialized) {
             windowManager.removeView(composeView)
         }
+        _viewModelStore.clear()
         isRunning = false
     }
 
@@ -255,7 +272,10 @@ private fun DraggableOverlay(
                                     val dy = drag.y.toDp()
                                     val newW = (size.width - dx).coerceAtLeast(minWidth)
                                     val newH = (size.height + dy).coerceAtLeast(minHeight)
-                                    offsetX = (offsetX + drag.x).coerceIn(0f,(screenW - newW.toPx()).coerceAtLeast(0f))
+                                    offsetX = (offsetX + drag.x).coerceIn(
+                                        0f,
+                                        (screenW - newW.toPx()).coerceAtLeast(0f)
+                                    )
                                     size = DpSize(newW, newH)
                                     lp.apply {
                                         width = newW.roundToPx()
