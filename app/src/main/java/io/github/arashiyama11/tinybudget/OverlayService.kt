@@ -31,8 +31,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -270,6 +270,11 @@ private fun DraggableOverlay(
             shape = shape
         ) {
             Box(Modifier.fillMaxSize()) {
+
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    content()
+                }
+
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -282,11 +287,8 @@ private fun DraggableOverlay(
                         modifier = Modifier
                             .size(16.dp)
                             .clickable { onExit() },
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
-                }
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    content()
                 }
 
                 Box(
@@ -332,20 +334,3 @@ private fun DraggableOverlay(
         }
     }
 }
-
-@Composable
-fun CurrentTimeText() {
-    val formatter = remember { DateTimeFormatter.ofPattern("HH:mm:ss") }
-    var currentTime by remember { mutableStateOf(LocalTime.now().format(formatter)) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            measureTimeMillis {
-                currentTime = LocalTime.now().format(formatter)
-            }
-            delay(1_00L)
-        }
-    }
-    Text(text = currentTime)
-}
-
-
