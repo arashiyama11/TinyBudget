@@ -1,25 +1,16 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
-import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.retained.produceRetainedState
@@ -35,7 +26,6 @@ import io.github.arashiyama11.tinybudget.Amount
 import io.github.arashiyama11.tinybudget.Category
 import io.github.arashiyama11.tinybudget.CategoryId
 import io.github.arashiyama11.tinybudget.MonthlySummary
-import io.github.arashiyama11.tinybudget.OverlayService
 import io.github.arashiyama11.tinybudget.Transaction
 import io.github.arashiyama11.tinybudget.TransactionId
 import io.github.arashiyama11.tinybudget.data.local.entity.Category as CategoryEntity
@@ -43,7 +33,6 @@ import io.github.arashiyama11.tinybudget.data.local.entity.Transaction as Transa
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import io.github.arashiyama11.tinybudget.ui.component.DeleteConfirmationDialog
-import io.github.arashiyama11.tinybudget.ui.component.Footer
 import io.github.arashiyama11.tinybudget.ui.component.MonthlySummaryPager
 import io.github.arashiyama11.tinybudget.ui.component.TransactionList
 import io.github.arashiyama11.tinybudget.ui.component.TransactionListItem
@@ -251,8 +240,6 @@ private fun Transaction.toEntity(): TransactionEntity {
 
 @Composable
 fun MainUi(state: MainScreen.State, modifier: Modifier) {
-    val context = LocalContext.current
-
     if (state.transactionToDelete != null) {
         DeleteConfirmationDialog(
             transaction = state.transactionToDelete,
@@ -265,42 +252,22 @@ fun MainUi(state: MainScreen.State, modifier: Modifier) {
         )
     }
 
-    Scaffold(
-        modifier = modifier,
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                val intent = Intent(context, OverlayService::class.java)
-                context.startForegroundService(intent)
-            }) {
-                Icon(Icons.Filled.Add, contentDescription = "支出を記録する")
-            }
-        },
-        bottomBar = {
-            Footer(
-                currentScreen = MainScreen, navigate = {
-                    state.eventSink(MainScreen.Event.NavigateTo(it))
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-        ) {
-            MonthlySummaryPager(
-                baseYear = state.currentYear,
-                baseMonth = state.currentMonth,
-                onMonthChanged = { delta ->
-                    state.eventSink(MainScreen.Event.ChangeMonth(delta))
-                },
-                summaryFor = { y, m -> state.monthSummaries[YearMonth(y, m)] }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "Transactions", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            TransactionList(transactions = state.transactions, eventSink = state.eventSink)
-        }
+    Column(
+        modifier = modifier
+            .padding(horizontal = 16.dp)
+    ) {
+        MonthlySummaryPager(
+            baseYear = state.currentYear,
+            baseMonth = state.currentMonth,
+            onMonthChanged = { delta ->
+                state.eventSink(MainScreen.Event.ChangeMonth(delta))
+            },
+            summaryFor = { y, m -> state.monthSummaries[YearMonth(y, m)] }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = "Transactions", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+        TransactionList(transactions = state.transactions, eventSink = state.eventSink)
     }
 }
 

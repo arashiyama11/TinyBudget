@@ -12,6 +12,7 @@ class MainActivityContainer(
     val onBoardingPresenterFactory = OnBoardingPresenter.Factory(
         permissionManager = permissionManager
     )
+    val homePresenterFactory = HomePresenter.Factory()
     val mainPresenterFactory = MainPresenter.Factory(
         transactionRepository = appContainer.transactionRepository,
         categoryRepository = appContainer.categoryRepository

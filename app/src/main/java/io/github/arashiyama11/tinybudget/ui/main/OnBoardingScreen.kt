@@ -86,6 +86,9 @@ class OnBoardingPresenter(
         var permissionPhase by rememberRetained { mutableStateOf(initialPhase()) }
         val snackbar = LocalSnackbarHostState.current
 
+        if (permissionPhase == PermissionPhase.Complete) {
+            navigator.resetRoot(HomeScreen)
+        }
 
         return OnBoardingScreen.State(permissionPhase) { event ->
             permissionPhase =
@@ -122,7 +125,7 @@ class OnBoardingPresenter(
                     }
 
                     is OnBoardingScreen.Event.OnCompleteClicked -> {
-                        navigator.goTo(MainScreen)
+                        navigator.resetRoot(HomeScreen)
                     }
                 }
             }

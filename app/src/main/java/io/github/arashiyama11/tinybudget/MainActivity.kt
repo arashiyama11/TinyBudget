@@ -13,6 +13,8 @@ import com.slack.circuit.foundation.NavigableCircuitContent
 import com.slack.circuit.foundation.rememberCircuitNavigator
 import io.github.arashiyama11.tinybudget.ui.main.EditTransactionScreen
 import io.github.arashiyama11.tinybudget.ui.main.EditTransactionUi
+import io.github.arashiyama11.tinybudget.ui.main.HomeScreen
+import io.github.arashiyama11.tinybudget.ui.main.HomeUi
 import io.github.arashiyama11.tinybudget.ui.main.MainActivityContainer
 import io.github.arashiyama11.tinybudget.ui.main.MainScreen
 import io.github.arashiyama11.tinybudget.ui.main.MainUi
@@ -46,6 +48,10 @@ class MainActivity : AppCompatActivity() {
             .addPresenterFactory(container.onBoardingPresenterFactory)
             .addUi<OnBoardingScreen, OnBoardingScreen.State> { uiState, modifier ->
                 OnBoardingUi(uiState, modifier)
+            }
+            .addPresenterFactory(container.homePresenterFactory)
+            .addUi<HomeScreen, HomeScreen.State> { uiState, modifier ->
+                HomeUi(uiState, modifier)
             }
             .addPresenterFactory(container.mainPresenterFactory)
             .addUi<MainScreen, MainScreen.State> { uiState, modifier ->

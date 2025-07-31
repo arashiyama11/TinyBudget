@@ -199,115 +199,104 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
         )
     }
 
-    Scaffold(
-        modifier = modifier,
-        bottomBar = {
-            Footer(currentScreen = SettingsScreen, navigate = {
-                state.eventSink(SettingsScreen.Event.NavigateTo(it))
-            })
-        }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize(),
-        ) {
-            item {
-                Card(modifier = Modifier.padding(16.dp)) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = "カテゴリ管理", style = MaterialTheme.typography.titleLarge)
-                            IconButton(onClick = { state.eventSink(SettingsScreen.Event.ShowAddCategoryDialog) }) {
-                                Icon(Icons.Default.Add, contentDescription = "Add Category")
-                            }
-                        }
-                        state.categories.forEach { category ->
-                            ListItem(
-                                headlineContent = { Text(category.name) },
-                                modifier = Modifier.clickable {
-                                    state.eventSink(
-                                        SettingsScreen.Event.ShowEditCategoryDialog(
-                                            category
-                                        )
-                                    )
-                                },
-                                trailingContent = {
-                                    Checkbox(
-                                        checked = category.isEnabled,
-                                        onCheckedChange = { isEnabled ->
-                                            state.eventSink(
-                                                SettingsScreen.Event.OnCategoryEnabledChanged(
-                                                    category,
-                                                    isEnabled
-                                                )
-                                            )
-                                        }
-                                    )
-                                }
-                            )
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        item {
+            Card(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "カテゴリ管理", style = MaterialTheme.typography.titleLarge)
+                        IconButton(onClick = { state.eventSink(SettingsScreen.Event.ShowAddCategoryDialog) }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Category")
                         }
                     }
-                }
-
-                HorizontalDivider()
-            }
-
-            item {
-                Card(modifier = Modifier.padding(16.dp)) {
-
-                    ListItem(
-                        headlineContent = { Text("トリガーアプリ設定") },
-                        modifier = Modifier
-                            .clickable {
+                    state.categories.forEach { category ->
+                        ListItem(
+                            headlineContent = { Text(category.name) },
+                            modifier = Modifier.clickable {
                                 state.eventSink(
-                                    SettingsScreen.Event.NavigateTo(
-                                        TriggerAppsScreen
+                                    SettingsScreen.Event.ShowEditCategoryDialog(
+                                        category
                                     )
                                 )
+                            },
+                            trailingContent = {
+                                Checkbox(
+                                    checked = category.isEnabled,
+                                    onCheckedChange = { isEnabled ->
+                                        state.eventSink(
+                                            SettingsScreen.Event.OnCategoryEnabledChanged(
+                                                category,
+                                                isEnabled
+                                            )
+                                        )
+                                    }
+                                )
                             }
-                            .padding(16.dp)
-                    )
-                }
-
-                HorizontalDivider()
-            }
-
-            item {
-                Card(modifier = Modifier.padding(16.dp)) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "権限設定", style = MaterialTheme.typography.titleLarge)
-                        PermissionItem(
-                            name = "オーバーレイ表示",
-                            isGranted = state.permissionStatus["overlay"] ?: false,
-                            onClick = { state.eventSink(SettingsScreen.Event.OnRequestPermission("overlay")) }
-                        )
-                        PermissionItem(
-                            name = "ユーザー補助機能",
-                            isGranted = state.permissionStatus["accessibility"] ?: false,
-                            onClick = { state.eventSink(SettingsScreen.Event.OnRequestPermission("accessibility")) }
-                        )
-                        PermissionItem(
-                            name = "通知",
-                            isGranted = state.permissionStatus["notification"] ?: false,
-                            onClick = { state.eventSink(SettingsScreen.Event.OnRequestPermission("notification")) }
                         )
                     }
                 }
-
-                HorizontalDivider()
             }
 
-            item {
-                Card(modifier = Modifier.padding(16.dp)) {
-                    ListItem(
-                        headlineContent = { Text("オーバーレイ設定をリセット") },
-                        modifier = Modifier.clickable { state.eventSink(SettingsScreen.Event.OnResetOverlaySettingsClicked) }
+            HorizontalDivider()
+        }
+
+        item {
+            Card(modifier = Modifier.padding(16.dp)) {
+
+                ListItem(
+                    headlineContent = { Text("トリガーアプリ設定") },
+                    modifier = Modifier
+                        .clickable {
+                            state.eventSink(
+                                SettingsScreen.Event.NavigateTo(
+                                    TriggerAppsScreen
+                                )
+                            )
+                        }
+                        .padding(16.dp)
+                )
+            }
+
+            HorizontalDivider()
+        }
+
+        item {
+            Card(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = "権限設定", style = MaterialTheme.typography.titleLarge)
+                    PermissionItem(
+                        name = "オーバーレイ表示",
+                        isGranted = state.permissionStatus["overlay"] ?: false,
+                        onClick = { state.eventSink(SettingsScreen.Event.OnRequestPermission("overlay")) }
+                    )
+                    PermissionItem(
+                        name = "ユーザー補助機能",
+                        isGranted = state.permissionStatus["accessibility"] ?: false,
+                        onClick = { state.eventSink(SettingsScreen.Event.OnRequestPermission("accessibility")) }
+                    )
+                    PermissionItem(
+                        name = "通知",
+                        isGranted = state.permissionStatus["notification"] ?: false,
+                        onClick = { state.eventSink(SettingsScreen.Event.OnRequestPermission("notification")) }
                     )
                 }
+            }
+
+            HorizontalDivider()
+        }
+
+        item {
+            Card(modifier = Modifier.padding(16.dp)) {
+                ListItem(
+                    headlineContent = { Text("オーバーレイ設定をリセット") },
+                    modifier = Modifier.clickable { state.eventSink(SettingsScreen.Event.OnResetOverlaySettingsClicked) }
+                )
             }
         }
     }

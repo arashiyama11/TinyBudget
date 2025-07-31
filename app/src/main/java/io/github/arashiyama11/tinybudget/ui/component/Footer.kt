@@ -31,7 +31,7 @@ sealed class BottomNavItem(
 fun Footer(
     modifier: Modifier = Modifier,
     currentScreen: Screen,
-    navigate: (Screen) -> Unit,
+    onTabSelected: (Screen) -> Unit,
 ) {
     val items = listOf(
         BottomNavItem.Main,
@@ -42,8 +42,8 @@ fun Footer(
             NavigationBarItem(
                 icon = item.icon,
                 label = { Text(item.resourceId) },
-                selected = currentScreen == item.screen,
-                onClick = { navigate(item.screen) }
+                selected = currentScreen::class == item.screen::class,
+                onClick = { onTabSelected(item.screen) }
             )
         }
     }
