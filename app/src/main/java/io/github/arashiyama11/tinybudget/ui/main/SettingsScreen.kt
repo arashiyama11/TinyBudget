@@ -1,32 +1,24 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
-import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,18 +29,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.slack.circuit.retained.collectAsRetainedState
 import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
+import com.slack.circuit.runtime.internal.rememberStableCoroutineScope
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.PermissionManager
 import io.github.arashiyama11.tinybudget.data.local.entity.Category
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
+import io.github.arashiyama11.tinybudget.ui.component.AddCategoryDialog
+import io.github.arashiyama11.tinybudget.ui.component.EditCategoryDialog
 import io.github.arashiyama11.tinybudget.ui.component.Footer
+import io.github.arashiyama11.tinybudget.ui.component.PermissionItem
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 
@@ -86,12 +83,12 @@ class SettingsPresenter(
 ) : Presenter<SettingsScreen.State> {
     @Composable
     override fun present(): SettingsScreen.State {
-        val scope = rememberCoroutineScope()
+        val scope = rememberStableCoroutineScope()
         val categories by categoryRepository.getAllCategories()
-            .collectAsState(initial = emptyList())
+            .collectAsRetainedState(initial = emptyList())
         var showAddCategoryDialog by rememberRetained { mutableStateOf(false) }
         var editingCategory by rememberRetained { mutableStateOf<Category?>(null) }
-        val permissionStatus by remember { mutableStateOf(getPermissionStatus()) }
+        val permissionStatus by rememberRetained { mutableStateOf(getPermissionStatus()) }
 
         return SettingsScreen.State(
             categories = categories,
@@ -255,6 +252,8 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
                         }
                     }
                 }
+
+                HorizontalDivider()
             }
 
             item {
@@ -273,6 +272,8 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
                             .padding(16.dp)
                     )
                 }
+
+                HorizontalDivider()
             }
 
             item {
@@ -296,6 +297,8 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
                         )
                     }
                 }
+
+                HorizontalDivider()
             }
 
             item {
@@ -308,93 +311,5 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
             }
         }
     }
-}
-
-@Composable
-private fun PermissionItem(name: String, isGranted: Boolean, onClick: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(name) },
-        trailingContent = {
-            Text(
-                if (isGranted) "許可済み" else "未許可",
-                color = if (isGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-            )
-        },
-        modifier = Modifier.clickable(enabled = !isGranted, onClick = onClick)
-    )
-}
-
-@Composable
-private fun AddCategoryDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("カテゴリを追加") },
-        text = {
-            TextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("カテゴリ名") }
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(text) },
-                enabled = text.isNotBlank()
-            ) {
-                Text("追加")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("キャンセル")
-            }
-        }
-    )
-}
-
-@Composable
-private fun EditCategoryDialog(
-    category: Category,
-    onDismiss: () -> Unit,
-    onConfirm: (Category) -> Unit,
-    onDelete: (Category) -> Unit
-) {
-    var text by remember { mutableStateOf(category.name) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("カテゴリを編集") },
-        text = {
-            TextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("カテゴリ名") }
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(category.copy(name = text)) },
-                enabled = text.isNotBlank()
-            ) {
-                Text("更新")
-            }
-        },
-        dismissButton = {
-            Column {
-                Button(onClick = onDismiss) {
-                    Text("キャンセル")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(
-                    onClick = { onDelete(category) },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("削除")
-                }
-            }
-        }
-    )
 }
 

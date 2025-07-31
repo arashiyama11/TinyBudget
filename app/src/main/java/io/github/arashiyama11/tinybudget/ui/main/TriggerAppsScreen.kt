@@ -6,13 +6,16 @@ import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,14 +25,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.CircuitUiEvent
@@ -41,13 +51,21 @@ import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.drawable.toBitmap
+import com.slack.circuit.retained.collectAsRetainedState
+import com.slack.circuit.retained.produceRetainedState
+import com.slack.circuit.retained.rememberRetained
+import com.slack.circuit.runtime.internal.rememberStableCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Parcelize
 data object TriggerAppsScreen : Screen {
     data class AppInfo(
         val label: String,
         val packageName: String,
-        val isSelected: Boolean
+        val isSelected: Boolean,
+        val icon: ImageBitmap?
     )
 
     data class State(
@@ -66,18 +84,17 @@ class TriggerAppsPresenter(
     private val settingsRepository: SettingsRepository,
     private val context: Context
 ) : Presenter<TriggerAppsScreen.State> {
+
+    private val iconCache = mutableStateMapOf<String, ImageBitmap>()
+
     @Composable
     override fun present(): TriggerAppsScreen.State {
-        val scope = rememberCoroutineScope()
-        // ユーザーの現在の選択セット
-        val selectedApps by settingsRepository.triggerApps
-            .collectAsState(initial = emptySet())
+        val scope = rememberStableCoroutineScope()
+        val selectedApps by settingsRepository.triggerApps.collectAsRetainedState(initial = emptySet())
 
-        // 初回のみ「最初の selectedApps の値」をキャプチャ
-        val initialSelected = remember(selectedApps.isEmpty()) { selectedApps }
-
-        // allApps：初回だけ計算。選択済み(true)を先に、ラベル順でソート
-        val allApps = remember(initialSelected) {
+        // allBasic は今までどおり先に一度だけ作成
+        val initialSelected = rememberRetained(selectedApps.isEmpty()) { selectedApps }
+        val allBasic = rememberRetained(initialSelected) {
             val pm = context.packageManager
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
                 .asSequence()
@@ -86,7 +103,8 @@ class TriggerAppsPresenter(
                     TriggerAppsScreen.AppInfo(
                         label = pm.getApplicationLabel(it).toString(),
                         packageName = it.packageName,
-                        isSelected = initialSelected.contains(it.packageName)
+                        isSelected = initialSelected.contains(it.packageName),
+                        icon = null
                     )
                 }
                 .sortedWith(
@@ -96,17 +114,32 @@ class TriggerAppsPresenter(
                 .toList()
         }
 
-        // apps：allApps の順序はそのまま、isSelected フラグだけ最新の selectedApps で更新
-        val apps = allApps.map {
-            it.copy(isSelected = selectedApps.contains(it.packageName))
+        LaunchedEffect(allBasic.map { it.packageName }) {
+            withContext(Dispatchers.IO) {
+                val pm = context.packageManager
+                allBasic.forEach { info ->
+                    if (!iconCache.containsKey(info.packageName)) {
+                        val drawable = pm.getApplicationIcon(info.packageName)
+                        val bmp = drawable.toBitmap().asImageBitmap()
+                        iconCache[info.packageName] = bmp
+                    }
+                }
+            }
         }
 
-        return TriggerAppsScreen.State(apps = apps) { event ->
+        val apps = allBasic.map { basic ->
+            basic.copy(
+                isSelected = selectedApps.contains(basic.packageName),
+                icon = iconCache[basic.packageName]
+            )
+        }
+
+        return TriggerAppsScreen.State(apps) { event ->
             when (event) {
                 is TriggerAppsScreen.Event.GoBack ->
                     navigator.pop()
 
-                is TriggerAppsScreen.Event.OnToggleAppSelection -> {
+                is TriggerAppsScreen.Event.OnToggleAppSelection ->
                     scope.launch {
                         val newSet = selectedApps.toMutableSet().apply {
                             if (event.isSelected) add(event.packageName)
@@ -114,7 +147,6 @@ class TriggerAppsPresenter(
                         }
                         settingsRepository.setTriggerApps(newSet)
                     }
-                }
             }
         }
     }
@@ -141,6 +173,11 @@ class TriggerAppsPresenter(
 @Composable
 fun TriggerAppsUi(state: TriggerAppsScreen.State, modifier: Modifier) {
     val pm = LocalContext.current.packageManager
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(state.apps) {
+        listState.scrollToItem(0)
+    }
 
     Scaffold(
         modifier = modifier,
@@ -158,38 +195,21 @@ fun TriggerAppsUi(state: TriggerAppsScreen.State, modifier: Modifier) {
         LazyColumn(
             modifier = Modifier
                 .padding(paddingValues)
-                .fillMaxSize()
+                .fillMaxSize(),
+            state = listState,
         ) {
             items(state.apps, key = { it.packageName }) { app ->
-                // アプリごとに一度だけ変換するように remember でキャッシュ
-                val iconBitmap = remember(app.packageName) {
-                    // Drawable を取得
-                    val drawable = pm.getApplicationIcon(app.packageName)
-                    // Bitmap にキャスト or 描画
-                    val bmp = when (drawable) {
-                        is BitmapDrawable -> drawable.bitmap
-                        else -> {
-                            val w = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1
-                            val h = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1
-                            createBitmap(w, h).also { bitmap ->
-                                Canvas(bitmap).apply {
-                                    drawable.setBounds(0, 0, w, h)
-                                    drawable.draw(this)
-                                }
-                            }
-                        }
-                    }
-                    bmp.asImageBitmap()
-                }
-
                 ListItem(
-                    // ここでアイコンを左に表示
                     leadingContent = {
-                        Image(
-                            bitmap = iconBitmap,
-                            contentDescription = app.label,
-                            modifier = Modifier.size(40.dp)
-                        )
+                        if (app.icon != null) {
+                            Image(app.icon, contentDescription = app.label, Modifier.size(40.dp))
+                        } else {
+                            Icon(
+                                Icons.Default.Apps,
+                                contentDescription = app.label,
+                                Modifier.size(40.dp)
+                            )
+                        }
                     },
                     headlineContent = { Text(app.label) },
                     trailingContent = {

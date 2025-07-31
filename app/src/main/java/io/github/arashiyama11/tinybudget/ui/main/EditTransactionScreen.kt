@@ -32,13 +32,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.slack.circuit.retained.collectAsRetainedState
 import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
+import com.slack.circuit.runtime.internal.rememberStableCoroutineScope
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.Amount
@@ -74,9 +75,9 @@ class EditTransactionPresenter(
 ) : Presenter<EditTransactionScreen.State> {
     @Composable
     override fun present(): EditTransactionScreen.State {
-        val scope = rememberCoroutineScope()
+        val scope = rememberStableCoroutineScope()
         val categories by categoryRepository.getAllCategories()
-            .collectAsState(initial = emptyList())
+            .collectAsRetainedState(initial = emptyList())
 
         return EditTransactionScreen.State(
             transaction = screen.transaction,
