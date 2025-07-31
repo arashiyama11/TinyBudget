@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +25,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val OVERLAY_Y = floatPreferencesKey("overlay_y")
         private val OVERLAY_WIDTH = floatPreferencesKey("overlay_width")
         private val OVERLAY_HEIGHT = floatPreferencesKey("overlay_height")
+
+        private val TRIGGER_APPS = stringSetPreferencesKey("trigger_apps")
 
         private const val DEFAULT_OVERLAY_SIZE_X = 160f
         private const val DEFAULT_OVERLAY_SIZE_Y = 200f
@@ -54,6 +57,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             )
         }
 
+    val triggerApps: Flow<Set<String>> = dataStore.data
+        .map { preferences -> preferences[TRIGGER_APPS] ?: emptySet() }
+
     suspend fun setDefaultCategoryId(id: Int) = withContext(Dispatchers.IO) {
         dataStore.edit { preferences ->
             preferences[DEFAULT_CATEGORY_ID] = id
@@ -77,6 +83,21 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { preferences ->
             preferences[OVERLAY_WIDTH] = width
             preferences[OVERLAY_HEIGHT] = height
+        }
+    }
+
+    suspend fun resetOverlayPositionAndSize() = withContext(Dispatchers.IO) {
+        dataStore.edit { preferences ->
+            preferences.remove(OVERLAY_X)
+            preferences.remove(OVERLAY_Y)
+            preferences.remove(OVERLAY_WIDTH)
+            preferences.remove(OVERLAY_HEIGHT)
+        }
+    }
+
+    suspend fun setTriggerApps(packageNames: Set<String>) = withContext(Dispatchers.IO) {
+        dataStore.edit { preferences ->
+            preferences[TRIGGER_APPS] = packageNames
         }
     }
 }

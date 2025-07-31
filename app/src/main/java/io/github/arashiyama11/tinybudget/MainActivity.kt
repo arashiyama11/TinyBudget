@@ -20,6 +20,8 @@ import io.github.arashiyama11.tinybudget.ui.main.OnBoardingScreen
 import io.github.arashiyama11.tinybudget.ui.main.OnBoardingUi
 import io.github.arashiyama11.tinybudget.ui.main.SettingsScreen
 import io.github.arashiyama11.tinybudget.ui.main.SettingsUi
+import io.github.arashiyama11.tinybudget.ui.main.TriggerAppsScreen
+import io.github.arashiyama11.tinybudget.ui.main.TriggerAppsUi
 import io.github.arashiyama11.tinybudget.ui.theme.LocalSnackbarHostState
 import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
 
@@ -38,7 +40,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val appContainer = (application as TinyBudgetApp).appContainer
-        container = MainActivityContainer(appContainer, permissionManager)
+        container = MainActivityContainer(appContainer, permissionManager, this)
 
         val circuit = Circuit.Builder()
             .addPresenterFactory(container.onBoardingPresenterFactory)
@@ -56,6 +58,10 @@ class MainActivity : AppCompatActivity() {
             .addPresenterFactory(container.editTransactionPresenterFactory)
             .addUi<EditTransactionScreen, EditTransactionScreen.State> { uiState, modifier ->
                 EditTransactionUi(uiState, modifier)
+            }
+            .addPresenterFactory(container.triggerAppsPresenterFactory)
+            .addUi<TriggerAppsScreen, TriggerAppsScreen.State> { uiState, modifier ->
+                TriggerAppsUi(uiState, modifier)
             }
             .build()
 

@@ -5,17 +5,24 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
-class AppLaunchAccessibilityService: AccessibilityService() {
-    private val monitoredPackages = mutableSetOf("jp.ne.paypay.android.app")
+class AppLaunchAccessibilityService : AccessibilityService() {
+    private lateinit var settingsRepository: SettingsRepository
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    override fun onCreate() {
+        super.onCreate()
+        settingsRepository = (application as TinyBudgetApp).appContainer.settingsRepository
+    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -35,8 +42,10 @@ class AppLaunchAccessibilityService: AccessibilityService() {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
 
         val pkg = event.packageName?.toString() ?: return
-        if (monitoredPackages.contains(pkg)) {
-            scope.launch {
+        scope.launch {
+            val triggerApps = settingsRepository.triggerApps.first()
+            Log.d("AppLaunchAccessibilityService", "Package: $pkg, Trigger Apps: $triggerApps")
+            if (triggerApps.contains(pkg)) {
                 launchRequestFlow.emit(pkg)
             }
         }
@@ -45,7 +54,7 @@ class AppLaunchAccessibilityService: AccessibilityService() {
     private val launchRequestFlow = MutableSharedFlow<String>()
 
     @OptIn(FlowPreview::class)
-    private fun startWatchRequest(){
+    private fun startWatchRequest() {
         scope.launch {
             launchRequestFlow.sample(500).collect {
                 Log.d("AppLaunchAccessibilityService", "Starting OverlayService")
@@ -56,9 +65,6 @@ class AppLaunchAccessibilityService: AccessibilityService() {
     }
 
 
-
-    override fun onInterrupt() { /* NOP */ }
-
-    fun addMonitor(pkg: String)    { monitoredPackages += pkg }
-    fun removeMonitor(pkg: String) { monitoredPackages -= pkg }
+    override fun onInterrupt() { /* NOP */
+    }
 }

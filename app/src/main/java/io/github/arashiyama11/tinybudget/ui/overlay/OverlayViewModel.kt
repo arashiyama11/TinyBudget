@@ -41,7 +41,7 @@ class OverlayViewModel(
     init {
         viewModelScope.launch {
             // カテゴリ取得とデフォルトカテゴリ設定を並行実行
-            categoryRepository.getAllCategories().collect { categories ->
+            categoryRepository.getEnabledCategories().collect { categories ->
                 _uiState.update { it.copy(categories = categories) }
 
                 // カテゴリ取得後にデフォルトカテゴリを設定

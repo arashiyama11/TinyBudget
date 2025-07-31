@@ -13,6 +13,9 @@ interface CategoryDao {
     @Query("SELECT * FROM categories ORDER BY id ASC")
     fun getAll(): Flow<List<Category>>
 
+    @Query("SELECT * FROM categories WHERE isEnabled = 1 ORDER BY id ASC")
+    fun getEnabled(): Flow<List<Category>>
+
     @Query("SELECT * FROM categories WHERE id = :id")
     suspend fun findById(id: Int): Category?
 

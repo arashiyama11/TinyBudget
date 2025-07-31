@@ -3,9 +3,18 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <queries>
+        <!-- ランチャーに出るアプリを一覧取得 -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
 
     <application
         android:name=".TinyBudgetApp"
@@ -17,16 +26,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TinyBudget">
-        <service android:name=".OverlayService"
+        <service
+            android:name=".OverlayService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
-            android:theme="@style/Theme.AppCompat"/>
+            android:theme="@style/Theme.AppCompat" />
         <service
             android:name=".AppLaunchAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:label="Tiny Budget"
-            android:exported="false"
-            >
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
@@ -34,6 +43,7 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -10,6 +10,10 @@ class CategoryRepository(private val categoryDao: CategoryDao) {
         return categoryDao.getAll()
     }
 
+    fun getEnabledCategories(): Flow<List<Category>> {
+        return categoryDao.getEnabled()
+    }
+
     suspend fun getCategory(id: Int): Category? {
         return categoryDao.findById(id)
     }
