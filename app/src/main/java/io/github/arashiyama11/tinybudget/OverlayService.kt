@@ -64,11 +64,8 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import io.github.arashiyama11.tinybudget.data.local.database.AppDatabase
-import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
-import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import io.github.arashiyama11.tinybudget.data.AppContainer
 import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
-import io.github.arashiyama11.tinybudget.data.repository.dataStore
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayUi
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModel
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModelFactory
@@ -78,10 +75,8 @@ import kotlinx.coroutines.launch
 
 class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegistryOwner,
     OnBackPressedDispatcherOwner {
-    private val appDatabase by lazy { AppDatabase.getDatabase(this) }
-    private val categoryRepository by lazy { CategoryRepository(appDatabase.categoryDao()) }
-    private val transactionRepository by lazy { TransactionRepository(appDatabase.transactionDao()) }
-    private val settingsRepository by lazy { SettingsRepository(dataStore) }
+    private lateinit var appContainer: AppContainer
+    private lateinit var settingsRepository: SettingsRepository
 
     private val _viewModelStore = ViewModelStore()
 
@@ -95,7 +90,7 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
     private val overlayViewModel: OverlayViewModel by lazy {
         ViewModelProvider(
             this,
-            OverlayViewModelFactory(categoryRepository, transactionRepository, settingsRepository)
+            OverlayViewModelFactory(appContainer)
         )[OverlayViewModel::class.java]
     }
 
@@ -116,6 +111,8 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
 
     override fun onCreate() {
         super.onCreate()
+        appContainer = (application as TinyBudgetApp).appContainer
+        settingsRepository = appContainer.settingsRepository
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
         savedStateRegistryController.performAttach()

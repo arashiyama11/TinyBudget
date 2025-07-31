@@ -11,30 +11,22 @@ import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.foundation.CircuitCompositionLocals
 import com.slack.circuit.foundation.NavigableCircuitContent
 import com.slack.circuit.foundation.rememberCircuitNavigator
-import io.github.arashiyama11.tinybudget.data.local.database.AppDatabase
-import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
-import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
-import io.github.arashiyama11.tinybudget.ui.main.MainPresenter
-import io.github.arashiyama11.tinybudget.ui.main.MainScreen
-import io.github.arashiyama11.tinybudget.ui.main.MainUi
-import io.github.arashiyama11.tinybudget.ui.main.OnBoardingPresenter
-import io.github.arashiyama11.tinybudget.ui.main.OnBoardingScreen
-import io.github.arashiyama11.tinybudget.ui.main.OnBoardingUi
-import io.github.arashiyama11.tinybudget.ui.main.SettingsPresenter
-import io.github.arashiyama11.tinybudget.ui.main.SettingsScreen
-import io.github.arashiyama11.tinybudget.ui.main.SettingsUi
-import io.github.arashiyama11.tinybudget.ui.main.EditTransactionPresenter
 import io.github.arashiyama11.tinybudget.ui.main.EditTransactionScreen
 import io.github.arashiyama11.tinybudget.ui.main.EditTransactionUi
+import io.github.arashiyama11.tinybudget.ui.main.MainActivityContainer
+import io.github.arashiyama11.tinybudget.ui.main.MainScreen
+import io.github.arashiyama11.tinybudget.ui.main.MainUi
+import io.github.arashiyama11.tinybudget.ui.main.OnBoardingScreen
+import io.github.arashiyama11.tinybudget.ui.main.OnBoardingUi
+import io.github.arashiyama11.tinybudget.ui.main.SettingsScreen
+import io.github.arashiyama11.tinybudget.ui.main.SettingsUi
 import io.github.arashiyama11.tinybudget.ui.theme.LocalSnackbarHostState
 import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
 
 class MainActivity : AppCompatActivity() {
 
     private val permissionManager by lazy { PermissionManager(this) }
-    private val appDatabase by lazy { AppDatabase.getDatabase(this) }
-    private val categoryRepository by lazy { CategoryRepository(appDatabase.categoryDao()) }
-    private val transactionRepository by lazy { TransactionRepository(appDatabase.transactionDao()) }
+    private lateinit var container: MainActivityContainer
 
     override fun onResume() {
         super.onResume()
@@ -45,34 +37,23 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val appContainer = (application as TinyBudgetApp).appContainer
+        container = MainActivityContainer(appContainer, permissionManager)
+
         val circuit = Circuit.Builder()
-            .addPresenterFactory(
-                OnBoardingPresenter.Factory(
-                    permissionManager,
-                )
-            )
+            .addPresenterFactory(container.onBoardingPresenterFactory)
             .addUi<OnBoardingScreen, OnBoardingScreen.State> { uiState, modifier ->
                 OnBoardingUi(uiState, modifier)
             }
-            .addPresenterFactory(
-                MainPresenter.Factory(
-                    transactionRepository,
-                    categoryRepository
-                )
-            )
+            .addPresenterFactory(container.mainPresenterFactory)
             .addUi<MainScreen, MainScreen.State> { uiState, modifier ->
                 MainUi(uiState, modifier)
             }
-            .addPresenterFactory(SettingsPresenter.Factory())
+            .addPresenterFactory(container.settingsPresenterFactory)
             .addUi<SettingsScreen, SettingsScreen.State> { uiState, modifier ->
                 SettingsUi(uiState, modifier)
             }
-            .addPresenterFactory(
-                EditTransactionPresenter.Factory(
-                    transactionRepository,
-                    categoryRepository
-                )
-            )
+            .addPresenterFactory(container.editTransactionPresenterFactory)
             .addUi<EditTransactionScreen, EditTransactionScreen.State> { uiState, modifier ->
                 EditTransactionUi(uiState, modifier)
             }

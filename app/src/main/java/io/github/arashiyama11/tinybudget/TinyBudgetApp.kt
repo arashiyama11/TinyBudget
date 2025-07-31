@@ -1,11 +1,9 @@
 package io.github.arashiyama11.tinybudget
 
 import android.app.Application
-import androidx.room.Room
-import io.github.arashiyama11.tinybudget.data.local.database.AppDatabase
+import io.github.arashiyama11.tinybudget.data.AppContainer
+import io.github.arashiyama11.tinybudget.data.DefaultAppContainer
 import io.github.arashiyama11.tinybudget.data.local.entity.Category
-import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
-import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -13,16 +11,11 @@ import kotlinx.coroutines.launch
 
 class TinyBudgetApp : Application() {
 
-    lateinit var categoryRepository: CategoryRepository
-    lateinit var transactionRepository: TransactionRepository
+    lateinit var appContainer: AppContainer
 
     override fun onCreate() {
         super.onCreate()
-
-        val database = AppDatabase.getDatabase(this)
-
-        categoryRepository = CategoryRepository(database.categoryDao())
-        transactionRepository = TransactionRepository(database.transactionDao())
+        appContainer = DefaultAppContainer(this)
 
         // Initialize default categories
         CoroutineScope(Dispatchers.IO).launch {
@@ -31,10 +24,10 @@ class TinyBudgetApp : Application() {
     }
 
     private suspend fun initializeDefaultCategories() {
-        val categories = categoryRepository.getAllCategories().first()
+        val categories = appContainer.categoryRepository.getAllCategories().first()
         if (categories.isEmpty()) {
-            categoryRepository.addCategory(Category(name = "食費"))
-            categoryRepository.addCategory(Category(name = "その他"))
+            appContainer.categoryRepository.addCategory(Category(name = "食費"))
+            appContainer.categoryRepository.addCategory(Category(name = "その他"))
         }
     }
 }

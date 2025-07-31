@@ -3,18 +3,19 @@ package io.github.arashiyama11.tinybudget.ui.overlay
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import io.github.arashiyama11.tinybudget.data.AppContainer
 import io.github.arashiyama11.tinybudget.data.local.entity.Category
 import io.github.arashiyama11.tinybudget.data.local.entity.Transaction
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
-import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
+import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 
 data class OverlayUiState(
     val amount: Long = 0L,
@@ -111,15 +112,15 @@ class OverlayViewModel(
     }
 }
 
-class OverlayViewModelFactory(
-    private val categoryRepo: CategoryRepository,
-    private val transactionRepo: TransactionRepository,
-    private val settingsRepo: SettingsRepository
-) : ViewModelProvider.Factory {
+class OverlayViewModelFactory(private val appContainer: AppContainer) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(OverlayViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return OverlayViewModel(categoryRepo, transactionRepo, settingsRepo) as T
+            return OverlayViewModel(
+                appContainer.categoryRepository,
+                appContainer.transactionRepository,
+                appContainer.settingsRepository
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
