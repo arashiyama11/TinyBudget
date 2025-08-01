@@ -1,6 +1,7 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
 import android.content.Intent
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -28,6 +29,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data object HomeScreen : Screen {
     data class State(
+        val navigator: Navigator,
         val eventSink: (Event) -> Unit
     ) : CircuitUiState
 
@@ -35,10 +37,12 @@ data object HomeScreen : Screen {
     }
 }
 
-class HomePresenter : Presenter<HomeScreen.State> {
+class HomePresenter(
+    private val navigator: Navigator,
+) : Presenter<HomeScreen.State> {
     @Composable
     override fun present(): HomeScreen.State {
-        return HomeScreen.State { event ->
+        return HomeScreen.State(navigator) { event ->
         }
     }
 
@@ -49,7 +53,7 @@ class HomePresenter : Presenter<HomeScreen.State> {
             context: CircuitContext
         ): Presenter<*>? {
             return if (screen is HomeScreen) {
-                HomePresenter()
+                HomePresenter(navigator)
             } else {
                 null
             }
@@ -66,7 +70,6 @@ fun HomeUi(state: HomeScreen.State, modifier: Modifier) {
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            // MainScreen (page 0) の時だけ FAB を表示
             if (pagerState.currentPage == 0) {
                 FloatingActionButton(onClick = {
                     val intent = Intent(context, OverlayService::class.java)
@@ -83,7 +86,6 @@ fun HomeUi(state: HomeScreen.State, modifier: Modifier) {
                     scope.launch {
                         val page = if (screen is MainScreen) 0 else 1
                         pagerState.scrollToPage(page)
-                        pagerState.animateScrollToPage(page)
                     }
                 }
             )
@@ -92,10 +94,22 @@ fun HomeUi(state: HomeScreen.State, modifier: Modifier) {
         HorizontalPager(
             state = pagerState,
         ) { page ->
-            val pageModifier = modifier.padding(paddingValues)
             when (page) {
-                0 -> CircuitContent(screen = MainScreen, modifier = pageModifier)
-                1 -> CircuitContent(screen = SettingsScreen, modifier = pageModifier)
+                0 -> CircuitContent(
+                    screen = MainScreen,
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize(),
+                    navigator = state.navigator,
+                )
+
+                1 -> CircuitContent(
+                    screen = SettingsScreen,
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize(),
+                    navigator = state.navigator,
+                )
             }
         }
     }

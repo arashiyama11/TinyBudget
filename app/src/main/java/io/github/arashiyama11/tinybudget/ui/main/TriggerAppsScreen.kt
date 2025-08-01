@@ -3,10 +3,7 @@ package io.github.arashiyama11.tinybudget.ui.main
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,20 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.CircuitUiEvent
@@ -50,10 +38,8 @@ import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
-import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
 import com.slack.circuit.retained.collectAsRetainedState
-import com.slack.circuit.retained.produceRetainedState
 import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.internal.rememberStableCoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -172,10 +158,9 @@ class TriggerAppsPresenter(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TriggerAppsUi(state: TriggerAppsScreen.State, modifier: Modifier) {
-    val pm = LocalContext.current.packageManager
     val listState = rememberLazyListState()
 
-    LaunchedEffect(state.apps) {
+    LaunchedEffect(state.apps.size) {
         listState.scrollToItem(0)
     }
 
