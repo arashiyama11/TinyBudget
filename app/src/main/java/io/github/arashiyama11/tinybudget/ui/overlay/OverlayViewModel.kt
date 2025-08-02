@@ -12,8 +12,9 @@ import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -24,7 +25,9 @@ data class OverlayUiState(
     val selectedCategoryId: Int? = null,
     val closeOverlay: Boolean = false,
     val showSaveConfirmation: Boolean = false,
-    val sync: Boolean = false
+    val sync: Boolean = false,
+    val frictionMultiplier: Float = 1f,
+    val amountStep: Long = 10L,
 )
 
 class OverlayViewModel(
@@ -35,9 +38,24 @@ class OverlayViewModel(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OverlayUiState())
-    val uiState: StateFlow<OverlayUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<OverlayUiState> = combine(
+        _uiState,
+        settingsRepository.frictionMultiplier,
+        settingsRepository.amountStep
+    ) { state, friction, amountStep ->
+        state.copy(
+            frictionMultiplier = friction,
+            amountStep = amountStep,
+        )
+    }.stateIn(
+        viewModelScope,
+        kotlinx.coroutines.flow.SharingStarted.Eagerly,
+        OverlayUiState(
+        )
+    )
 
-    val amountStep: Long = 10 // 金額の変動単位
+    val frictionMultiplier = settingsRepository.frictionMultiplier
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, 1f)
 
     init {
         viewModelScope.launch {
@@ -64,7 +82,8 @@ class OverlayViewModel(
     }
 
     fun onAmountChange(newAmount: Long) {
-        val finalAmount = if (newAmount < 0) 0L else (newAmount / amountStep) * amountStep
+        val finalAmount =
+            if (newAmount < 0) 0L else (newAmount / uiState.value.amountStep) * uiState.value.amountStep
         _uiState.update { it.copy(amount = finalAmount) }
     }
 

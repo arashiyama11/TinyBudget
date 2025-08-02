@@ -21,16 +21,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import io.github.arashiyama11.tinybudget.ui.component.CategorySelector
 import io.github.arashiyama11.tinybudget.ui.component.DialAmountInput
+import androidx.compose.ui.unit.sp
+import io.github.arashiyama11.tinybudget.TinyBudgetApp
 import io.github.arashiyama11.tinybudget.ui.theme.AppTextField
+import io.github.arashiyama11.tinybudget.ui.component.CategorySelector
+import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
 
 
 @Composable
 fun OverlayUi(overlayViewModel: OverlayViewModel) {
     val uiState by overlayViewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val frictionMultiplier by overlayViewModel.frictionMultiplier.collectAsState()
 
     // 保存完了トースト表示
     LaunchedEffect(uiState.showSaveConfirmation) {
@@ -55,7 +59,8 @@ fun OverlayUi(overlayViewModel: OverlayViewModel) {
             ) {
                 DialAmountInput(
                     amount = uiState.amount,
-                    step = overlayViewModel.amountStep,
+                    step = uiState.amountStep,
+                    frictionMultiplier = frictionMultiplier,
                     onAmountChange = overlayViewModel::onAmountChange,
                     modifier = Modifier
                         .fillMaxWidth()

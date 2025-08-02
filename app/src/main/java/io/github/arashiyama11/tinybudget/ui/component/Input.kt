@@ -51,6 +51,7 @@ import kotlin.math.roundToLong
 fun DialAmountInput(
     amount: Long,
     step: Long,
+    frictionMultiplier: Float,
     onAmountChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 32.sp,
@@ -62,7 +63,7 @@ fun DialAmountInput(
     val animatable = remember { Animatable(amount.toFloat()) }
     val velocityTracker = remember { VelocityTracker() }
     val scope = rememberCoroutineScope()
-    val decay = exponentialDecay<Float>(frictionMultiplier = 1f)
+    val decay = exponentialDecay<Float>(frictionMultiplier = frictionMultiplier)
 
     // 外部 amount が変わったら即同期
     LaunchedEffect(amount) {

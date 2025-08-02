@@ -19,6 +19,8 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     companion object {
+        val AMOUNT_STEP = longPreferencesKey("amount_step")
+        val FRICTION_MULTIPLIER = floatPreferencesKey("friction_multiplier")
         private val DEFAULT_CATEGORY_ID = intPreferencesKey("default_category_id")
         private val LAST_CATEGORY_ID = intPreferencesKey("last_category_id")
 
@@ -65,6 +67,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val triggerApps: Flow<Set<String>> = dataStore.data
         .map { preferences -> preferences[TRIGGER_APPS] ?: emptySet() }
 
+    val amountStep: Flow<Long> = dataStore.data
+        .map { preferences -> preferences[AMOUNT_STEP] ?: 10L }
+
+    val frictionMultiplier: Flow<Float> = dataStore.data
+        .map { preferences -> preferences[FRICTION_MULTIPLIER] ?: 1f }
+
     suspend fun setDefaultCategoryId(id: Int) = withContext(Dispatchers.IO) {
         dataStore.edit { preferences ->
             preferences[DEFAULT_CATEGORY_ID] = id
@@ -109,6 +117,18 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setTriggerApps(packageNames: Set<String>) = withContext(Dispatchers.IO) {
         dataStore.edit { preferences ->
             preferences[TRIGGER_APPS] = packageNames
+        }
+    }
+
+    suspend fun setAmountStep(step: Long) = withContext(Dispatchers.IO) {
+        dataStore.edit { preferences ->
+            preferences[AMOUNT_STEP] = step
+        }
+    }
+
+    suspend fun setFrictionMultiplier(multiplier: Float) = withContext(Dispatchers.IO) {
+        dataStore.edit { preferences ->
+            preferences[FRICTION_MULTIPLIER] = multiplier
         }
     }
 }

@@ -44,10 +44,12 @@ import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
 import io.github.arashiyama11.tinybudget.ui.component.AddCategoryDialog
 import io.github.arashiyama11.tinybudget.ui.component.EditCategoryDialog
-import io.github.arashiyama11.tinybudget.ui.component.Footer
-import io.github.arashiyama11.tinybudget.ui.component.PermissionItem
-import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
+import io.github.arashiyama11.tinybudget.ui.component.PermissionItem
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.platform.LocalContext
+import io.github.arashiyama11.tinybudget.TinyBudgetApp
+import kotlinx.coroutines.launch
 
 
 @Parcelize
@@ -290,7 +292,7 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
 
             HorizontalDivider()
         }
-
+        
         item {
             Card(modifier = Modifier.padding(16.dp)) {
                 ListItem(
