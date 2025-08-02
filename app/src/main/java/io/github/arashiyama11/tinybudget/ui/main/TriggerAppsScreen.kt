@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,27 +25,30 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
+import com.slack.circuit.runtime.internal.rememberStableCoroutineScope
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
-import kotlinx.coroutines.launch
-import kotlinx.parcelize.Parcelize
-import androidx.core.graphics.drawable.toBitmap
-import com.slack.circuit.retained.collectAsRetainedState
-import com.slack.circuit.retained.rememberRetained
-import com.slack.circuit.runtime.internal.rememberStableCoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data object TriggerAppsScreen : Screen {
@@ -54,10 +59,13 @@ data object TriggerAppsScreen : Screen {
         val icon: ImageBitmap?
     )
 
-    data class State(
-        val apps: List<AppInfo>,
-        val eventSink: (Event) -> Unit
-    ) : CircuitUiState
+    sealed interface State : CircuitUiState {
+        data object Loading : State
+        data class Success(
+            val apps: List<AppInfo>,
+            val eventSink: (Event) -> Unit
+        ) : State
+    }
 
     sealed interface Event : CircuitUiEvent {
         data object GoBack : Event
@@ -71,70 +79,69 @@ class TriggerAppsPresenter(
     private val context: Context
 ) : Presenter<TriggerAppsScreen.State> {
 
-    private val iconCache = mutableStateMapOf<String, ImageBitmap>()
-
     @Composable
     override fun present(): TriggerAppsScreen.State {
+        var appInfos by remember { mutableStateOf<List<TriggerAppsScreen.AppInfo>?>(null) }
+        val selectedApps by settingsRepository.triggerApps.collectAsState(initial = emptySet())
+        val initialSelectedApps = remember(selectedApps.isEmpty()) { selectedApps }
         val scope = rememberStableCoroutineScope()
-        val selectedApps by settingsRepository.triggerApps.collectAsRetainedState(initial = emptySet())
 
-        // allBasic は今までどおり先に一度だけ作成
-        val initialSelected = rememberRetained(selectedApps.isEmpty()) { selectedApps }
-        val allBasic = rememberRetained(initialSelected) {
-            val pm = context.packageManager
-            pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .asSequence()
-                .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
-                .map {
-                    TriggerAppsScreen.AppInfo(
-                        label = pm.getApplicationLabel(it).toString(),
-                        packageName = it.packageName,
-                        isSelected = initialSelected.contains(it.packageName),
-                        icon = null
-                    )
-                }
-                .sortedWith(
-                    compareByDescending<TriggerAppsScreen.AppInfo> { it.isSelected }
-                        .thenBy { it.label }
-                )
-                .toList()
-        }
-
-        LaunchedEffect(allBasic.map { it.packageName }) {
+        LaunchedEffect(Unit) {
             withContext(Dispatchers.IO) {
                 val pm = context.packageManager
-                allBasic.forEach { info ->
-                    if (!iconCache.containsKey(info.packageName)) {
-                        val drawable = pm.getApplicationIcon(info.packageName)
-                        val bmp = drawable.toBitmap().asImageBitmap()
-                        iconCache[info.packageName] = bmp
+                val allApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                    .asSequence()
+                    .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
+                    .map {
+                        val icon = try {
+                            pm.getApplicationIcon(it.packageName).toBitmap().asImageBitmap()
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            null
+                        }
+                        TriggerAppsScreen.AppInfo(
+                            label = pm.getApplicationLabel(it).toString(),
+                            packageName = it.packageName,
+                            isSelected = selectedApps.contains(it.packageName),
+                            icon = icon
+                        )
+                    }
+                    .toList()
+                appInfos = allApps
+            }
+        }
+
+        val eventSink: (TriggerAppsScreen.Event) -> Unit = remember {
+            { event ->
+                when (event) {
+                    is TriggerAppsScreen.Event.GoBack -> navigator.pop()
+                    is TriggerAppsScreen.Event.OnToggleAppSelection -> {
+                        scope.launch {
+                            val currentSelected = settingsRepository.triggerApps.first()
+                            val newSet = currentSelected.toMutableSet().apply {
+                                if (event.isSelected) add(event.packageName)
+                                else remove(event.packageName)
+                            }
+                            settingsRepository.setTriggerApps(newSet)
+                        }
                     }
                 }
             }
         }
 
-        val apps = allBasic.map { basic ->
-            basic.copy(
-                isSelected = selectedApps.contains(basic.packageName),
-                icon = iconCache[basic.packageName]
+        return if (appInfos == null) {
+            TriggerAppsScreen.State.Loading
+        } else {
+            val sortedApps = appInfos.orEmpty().map { appInfo ->
+                appInfo.copy(isSelected = selectedApps.contains(appInfo.packageName))
+            }.sortedWith(
+                compareByDescending<TriggerAppsScreen.AppInfo> { initialSelectedApps.contains(it.packageName) }
+                    .thenBy { it.label }
             )
-        }
-
-        return TriggerAppsScreen.State(apps) { event ->
-            when (event) {
-                is TriggerAppsScreen.Event.GoBack ->
-                    navigator.pop()
-
-                is TriggerAppsScreen.Event.OnToggleAppSelection ->
-                    scope.launch {
-                        val newSet = selectedApps.toMutableSet().apply {
-                            if (event.isSelected) add(event.packageName)
-                            else remove(event.packageName)
-                        }
-                        settingsRepository.setTriggerApps(newSet)
-                    }
-            }
-        }
+            TriggerAppsScreen.State.Success(
+                apps = sortedApps,
+                eventSink = eventSink
+            )
+        }.also { println("Present :$it") }
     }
 
     class Factory(
@@ -158,59 +165,77 @@ class TriggerAppsPresenter(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TriggerAppsUi(state: TriggerAppsScreen.State, modifier: Modifier) {
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(state.apps.size) {
-        listState.scrollToItem(0)
-    }
-
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("トリガーアプリ設定") },
                 navigationIcon = {
-                    IconButton(onClick = { state.eventSink(TriggerAppsScreen.Event.GoBack) }) {
+                    val eventSink = (state as? TriggerAppsScreen.State.Success)?.eventSink
+                    IconButton(
+                        onClick = { eventSink?.invoke(TriggerAppsScreen.Event.GoBack) },
+                        enabled = eventSink != null
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                     }
                 }
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize(),
-            state = listState,
-        ) {
-            items(state.apps, key = { it.packageName }) { app ->
-                ListItem(
-                    leadingContent = {
-                        if (app.icon != null) {
-                            Image(app.icon, contentDescription = app.label, Modifier.size(40.dp))
-                        } else {
-                            Icon(
-                                Icons.Default.Apps,
-                                contentDescription = app.label,
-                                Modifier.size(40.dp)
-                            )
-                        }
-                    },
-                    headlineContent = { Text(app.label) },
-                    trailingContent = {
-                        Checkbox(
-                            checked = app.isSelected,
-                            onCheckedChange = { isSelected ->
-                                state.eventSink(
-                                    TriggerAppsScreen.Event.OnToggleAppSelection(
-                                        app.packageName,
-                                        isSelected
+        when (state) {
+            is TriggerAppsScreen.State.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            is TriggerAppsScreen.State.Success -> {
+                val listState = rememberLazyListState()
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize(),
+                    state = listState,
+                ) {
+                    items(state.apps, key = { it.packageName }) { app ->
+                        ListItem(
+                            leadingContent = {
+                                if (app.icon != null) {
+                                    Image(
+                                        app.icon,
+                                        contentDescription = app.label,
+                                        Modifier.size(40.dp)
                                     )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Apps,
+                                        contentDescription = app.label,
+                                        Modifier.size(40.dp)
+                                    )
+                                }
+                            },
+                            headlineContent = { Text(app.label) },
+                            trailingContent = {
+                                Checkbox(
+                                    checked = app.isSelected,
+                                    onCheckedChange = { isSelected ->
+                                        state.eventSink(
+                                            TriggerAppsScreen.Event.OnToggleAppSelection(
+                                                app.packageName,
+                                                isSelected
+                                            )
+                                        )
+                                    }
                                 )
                             }
                         )
                     }
-                )
+                }
             }
         }
     }
