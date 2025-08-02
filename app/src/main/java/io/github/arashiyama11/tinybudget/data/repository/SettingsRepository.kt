@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +26,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val OVERLAY_Y = floatPreferencesKey("overlay_y")
         private val OVERLAY_WIDTH = floatPreferencesKey("overlay_width")
         private val OVERLAY_HEIGHT = floatPreferencesKey("overlay_height")
+        private val OVERLAY_DESTROYED_AT = longPreferencesKey("overlay_destroyed_at")
 
         private val TRIGGER_APPS = stringSetPreferencesKey("trigger_apps")
 
@@ -57,6 +59,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             )
         }
 
+    val overlayDestroyedAt: Flow<Long?> = dataStore.data
+        .map { preferences -> preferences[OVERLAY_DESTROYED_AT] }
+
     val triggerApps: Flow<Set<String>> = dataStore.data
         .map { preferences -> preferences[TRIGGER_APPS] ?: emptySet() }
 
@@ -83,6 +88,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { preferences ->
             preferences[OVERLAY_WIDTH] = width
             preferences[OVERLAY_HEIGHT] = height
+        }
+    }
+
+    suspend fun setOverlayDestroyedAt(time: Long) = withContext(Dispatchers.IO) {
+        dataStore.edit { preferences ->
+            preferences[OVERLAY_DESTROYED_AT] = time
         }
     }
 

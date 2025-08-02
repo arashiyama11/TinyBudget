@@ -30,7 +30,8 @@ data class OverlayUiState(
 class OverlayViewModel(
     private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val stopSelf: () -> Unit,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OverlayUiState())
@@ -104,22 +105,28 @@ class OverlayViewModel(
                     )
                 }
 
+
                 // 一定時間後に通知状態をリセット
-                delay(500)
+                delay(50)
                 _uiState.update { it.copy(showSaveConfirmation = false, sync = false) }
+                stopSelf()
             }
         }
     }
 }
 
-class OverlayViewModelFactory(private val appContainer: AppContainer) : ViewModelProvider.Factory {
+class OverlayViewModelFactory(
+    private val appContainer: AppContainer,
+    private val stopSelf: () -> Unit
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(OverlayViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return OverlayViewModel(
                 appContainer.categoryRepository,
                 appContainer.transactionRepository,
-                appContainer.settingsRepository
+                appContainer.settingsRepository,
+                stopSelf
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

@@ -10,6 +10,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.sample
@@ -17,7 +19,7 @@ import kotlinx.coroutines.launch
 
 class AppLaunchAccessibilityService : AccessibilityService() {
     private lateinit var settingsRepository: SettingsRepository
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     override fun onCreate() {
         super.onCreate()
@@ -42,7 +44,18 @@ class AppLaunchAccessibilityService : AccessibilityService() {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
 
         val pkg = event.packageName?.toString() ?: return
+        Log.d("AppLaunchAccessibilityService", "Package launched: $pkg, Event: $event")
         scope.launch {
+            val lastDestroyed = settingsRepository.overlayDestroyedAt.first() ?: 0L
+            delay(500)
+            if (System.currentTimeMillis() - lastDestroyed < 5000) {
+                Log.d(
+                    "AppLaunchAccessibilityService",
+                    "Skipping overlay start because it was recently destroyed"
+                )
+                return@launch
+            }
+
             val triggerApps = settingsRepository.triggerApps.first()
             Log.d("AppLaunchAccessibilityService", "Package: $pkg, Trigger Apps: $triggerApps")
             if (triggerApps.contains(pkg)) {
@@ -66,5 +79,10 @@ class AppLaunchAccessibilityService : AccessibilityService() {
 
 
     override fun onInterrupt() { /* NOP */
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
     }
 }

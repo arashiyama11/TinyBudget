@@ -90,7 +90,7 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
     private val overlayViewModel: OverlayViewModel by lazy {
         ViewModelProvider(
             this,
-            OverlayViewModelFactory(appContainer)
+            OverlayViewModelFactory(appContainer, ::stopSelf)
         )[OverlayViewModel::class.java]
     }
 
@@ -236,6 +236,10 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
         }
         _viewModelStore.clear()
         isRunning = false
+        println("Acc Overlay Service destroyed")
+        lifecycleScope.launch {
+            settingsRepository.setOverlayDestroyedAt(System.currentTimeMillis())
+        }
     }
 
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
