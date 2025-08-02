@@ -5,6 +5,12 @@
 
 (deny file-read* (subpath (string-append (param "HOME_DIR") "/.ssh")))
 
+(allow file-write-data
+    (literal "/dev/dtracehelper")
+    (literal "/dev/tty")
+    (regex "/dev/tty[0-9a-z]+")
+)
+
 ;; deny all writes EXCEPT under specific paths
 (deny file-write*)
 (allow file-write*
@@ -16,8 +22,12 @@
     (subpath (string-append (param "HOME_DIR") "/.cache"))
     (subpath (string-append (param "HOME_DIR") "/.gitconfig"))
     (subpath (string-append (param "HOME_DIR") "/.gradle"))
-    (subpath (string-append (param "HOME_DIR") "/Library/Application/Support/kotlin"))
+    (subpath (string-append (param "HOME_DIR") "/Library"))
     (subpath (string-append (param "HOME_DIR") "/.konan"))
+    (subpath (string-append (param "HOME_DIR") "/.config"))
+    (subpath (string-append (param "HOME_DIR") "/.local"))
+    (subpath (string-append (param "HOME_DIR") "/.serena"))
+
     (literal "/dev/stdout")
     (literal "/dev/stderr")
     (literal "/dev/null")
