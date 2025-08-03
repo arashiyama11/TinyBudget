@@ -26,7 +26,7 @@ data class OverlayUiState(
     val closeOverlay: Boolean = false,
     val showSaveConfirmation: Boolean = false,
     val sync: Boolean = false,
-    val frictionMultiplier: Float = 1f,
+    val sensitivity: Float = 1f,
     val amountStep: Long = 10L,
 )
 
@@ -40,11 +40,11 @@ class OverlayViewModel(
     private val _uiState = MutableStateFlow(OverlayUiState())
     val uiState: StateFlow<OverlayUiState> = combine(
         _uiState,
-        settingsRepository.frictionMultiplier,
+        settingsRepository.sensitivity,
         settingsRepository.amountStep
-    ) { state, friction, amountStep ->
+    ) { state, sensitivity, amountStep ->
         state.copy(
-            frictionMultiplier = friction,
+            sensitivity = sensitivity,
             amountStep = amountStep,
         )
     }.stateIn(
@@ -53,9 +53,6 @@ class OverlayViewModel(
         OverlayUiState(
         )
     )
-
-    val frictionMultiplier = settingsRepository.frictionMultiplier
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, 1f)
 
     init {
         viewModelScope.launch {

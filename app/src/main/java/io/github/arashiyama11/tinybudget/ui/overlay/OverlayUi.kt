@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,18 +24,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.arashiyama11.tinybudget.ui.component.DialAmountInput
 import androidx.compose.ui.unit.sp
-import io.github.arashiyama11.tinybudget.TinyBudgetApp
-import io.github.arashiyama11.tinybudget.ui.theme.AppTextField
 import io.github.arashiyama11.tinybudget.ui.component.CategorySelector
-import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
 
 
 @Composable
 fun OverlayUi(overlayViewModel: OverlayViewModel) {
     val uiState by overlayViewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val frictionMultiplier by overlayViewModel.frictionMultiplier.collectAsState()
 
     // 保存完了トースト表示
     LaunchedEffect(uiState.showSaveConfirmation) {
@@ -60,7 +56,7 @@ fun OverlayUi(overlayViewModel: OverlayViewModel) {
                 DialAmountInput(
                     amount = uiState.amount,
                     step = uiState.amountStep,
-                    frictionMultiplier = frictionMultiplier,
+                    sensitivity = uiState.sensitivity,
                     onAmountChange = overlayViewModel::onAmountChange,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -76,7 +72,7 @@ fun OverlayUi(overlayViewModel: OverlayViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                AppTextField(
+                TextField(
                     value = uiState.note,
                     onValueChange = overlayViewModel::onNoteChange,
                     label = { Text("メモ (任意)", fontSize = 14.sp) },

@@ -20,7 +20,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     companion object {
         val AMOUNT_STEP = longPreferencesKey("amount_step")
-        val FRICTION_MULTIPLIER = floatPreferencesKey("friction_multiplier")
+        val SENSITIVITY = floatPreferencesKey("sensitivity")
         private val DEFAULT_CATEGORY_ID = intPreferencesKey("default_category_id")
         private val LAST_CATEGORY_ID = intPreferencesKey("last_category_id")
 
@@ -70,8 +70,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val amountStep: Flow<Long> = dataStore.data
         .map { preferences -> preferences[AMOUNT_STEP] ?: 10L }
 
-    val frictionMultiplier: Flow<Float> = dataStore.data
-        .map { preferences -> preferences[FRICTION_MULTIPLIER] ?: 1f }
+    val sensitivity: Flow<Float> =
+        dataStore.data
+            .map { preferences -> preferences[SENSITIVITY] ?: 1f }
 
     suspend fun setDefaultCategoryId(id: Int) = withContext(Dispatchers.IO) {
         dataStore.edit { preferences ->
@@ -126,9 +127,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    suspend fun setFrictionMultiplier(multiplier: Float) = withContext(Dispatchers.IO) {
+    suspend fun setSensitivity(multiplier: Float) = withContext(Dispatchers.IO) {
         dataStore.edit { preferences ->
-            preferences[FRICTION_MULTIPLIER] = multiplier
+            preferences[SENSITIVITY] = multiplier
         }
     }
 }

@@ -4,7 +4,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -19,57 +18,55 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF4E535E),
+    primary = Color(0xFF7790ED),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFF2B2F36),
-    onPrimaryContainer = Color(0xFFFFFFFF),
-    inversePrimary = Color(0xFFBFC4CB),
+    primaryContainer = Color(0xFF4E6ED1),
+    onPrimaryContainer = Color(0xFFE1E8FF),
+    inversePrimary = Color(0xFFB3C4FF),
 
-    secondary = Color(0xFF7F8896),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFF2A2F37),
-    onSecondaryContainer = Color(0xFFFFFFFF),
+    secondary = Color(0xFFED9777),
+    onSecondary = Color(0xFF1F1A16),
+    secondaryContainer = Color(0xFF6E3A25),
+    onSecondaryContainer = Color(0xFFFFDBCE),
 
-    tertiary = Color(0xFFAFBAC1),
-    onTertiary = Color(0xFF202528),
-    tertiaryContainer = Color(0xFFE1E5E8),
-    onTertiaryContainer = Color(0xFF000000),
+    tertiary = Color(0xFF77EDB3),
+    onTertiary = Color(0xFF0A1F16),
+    tertiaryContainer = Color(0xFF1E3A2B),
+    onTertiaryContainer = Color(0xFFCEFAE0),
 
-    background = Color(0xFF353742),
+    background = Color(0xFF1E1F28),
     onBackground = Color(0xFFECEFF4),
-    surface = Color(0xFF353742),
+    surface = Color(0xFF1E1F28),
     onSurface = Color(0xFFECEFF4),
 
-    surfaceVariant = Color(0xFF4E535E),
-    onSurfaceVariant = Color(0xFFFFFFFF),
-    surfaceTint = Color(0xFF4E535E),
+    surfaceVariant = Color(0xFF2C2E3A),
+    onSurfaceVariant = Color(0xFFBFC4CB),
+    surfaceTint = Color(0xFF7790ED),
 
     inverseSurface = Color(0xFFECEFF4),
-    inverseOnSurface = Color(0xFF353742),
+    inverseOnSurface = Color(0xFF1E1F28),
 
     error = Color(0xFFB3261E),
     onError = Color(0xFFFFFFFF),
     errorContainer = Color(0xFFF9DEDC),
     onErrorContainer = Color(0xFF410E0B),
 
-    outline = Color(0xFF7F8896),
-    outlineVariant = Color(0xFFAFBAC1),
+    outline = Color(0xFF8F92A1),
+    outlineVariant = Color(0xFF3F4146),
     scrim = Color(0xFF000000),
 
-    surfaceBright = Color(0xFFECEFF4),
-    surfaceDim = Color(0xFF2A2C30),
+    surfaceBright = Color(0xFF2C2E3A),
+    surfaceDim = Color(0xFF14151A),
 
-    surfaceContainer = Color(0xFF3F4146),
-    surfaceContainerHigh = Color(0xFF4A4D52),
-    surfaceContainerHighest = Color(0xFF55585E),
-    surfaceContainerLow = Color(0xFF25262A),
-    surfaceContainerLowest = Color(0xFF1A1B1D),
+    surfaceContainer = Color(0xFF23252F),
+    surfaceContainerHigh = Color(0xFF2B2D38),
+    surfaceContainerHighest = Color(0xFF343643),
+    surfaceContainerLow = Color(0xFF1A1B24),
+    surfaceContainerLowest = Color(0xFF121217),
 )
-
 
 private val LightColorScheme = lightColorScheme(
     // Primary
@@ -167,50 +164,6 @@ val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> {
 }
 
 @Composable
-fun AppTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    label: @Composable (() -> Unit)? = null,
-    textStyle: TextStyle = TextStyle.Default,
-    readOnly: Boolean = false,
-    trailingIcon: @Composable (() -> Unit)? = null,
-) {
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        label = label,
-        colors = AppTextFieldColors,
-        textStyle = textStyle,
-        readOnly = readOnly,
-        trailingIcon = trailingIcon,
-    )
-}
-
-@Composable
-fun AppOutlinedTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    label: @Composable (() -> Unit)? = null,
-    textStyle: TextStyle = TextStyle.Default,
-    readOnly: Boolean = false,
-    trailingIcon: @Composable (() -> Unit)? = null,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        label = label,
-        colors = AppTextFieldColors,
-        textStyle = textStyle,
-        readOnly = readOnly,
-        trailingIcon = trailingIcon,
-    )
-}
-
-@Composable
 fun PreviewOf(content: @Composable () -> Unit) {
     TinyBudgetTheme {
         Column(
@@ -225,17 +178,10 @@ fun PreviewOf(content: @Composable () -> Unit) {
 @Composable
 fun PreviewTinyBudgetTheme() {
     PreviewOf {
-        AppTextField(
+        TextField(
             value = "プレビュー",
             onValueChange = {},
             label = { Text("AppTextFieldラベル") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        AppOutlinedTextField(
-            value = "プレビュー",
-            onValueChange = {},
-            label = { Text("AppOutlinedTextFieldラベル") },
             modifier = Modifier.fillMaxWidth()
         )
     }

@@ -9,6 +9,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,7 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.arashiyama11.tinybudget.data.local.entity.Category
-import io.github.arashiyama11.tinybudget.ui.theme.AppTextField
 
 @Composable
 fun AddCategoryDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
@@ -27,7 +27,7 @@ fun AddCategoryDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text("カテゴリを追加") },
         text = {
-            AppTextField(
+            TextField(
                 value = text,
                 onValueChange = { text = it },
                 label = { Text("カテゴリ名") }
@@ -62,7 +62,7 @@ fun EditCategoryDialog(
         onDismissRequest = onDismiss,
         title = { Text("カテゴリを編集") },
         text = {
-            AppTextField(
+            TextField(
                 value = text,
                 onValueChange = { text = it },
                 label = { Text("カテゴリ名") }

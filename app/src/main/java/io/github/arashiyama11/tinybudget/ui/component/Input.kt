@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,7 +37,6 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.arashiyama11.tinybudget.data.local.entity.Category
-import io.github.arashiyama11.tinybudget.ui.theme.AppTextField
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -51,7 +51,7 @@ import kotlin.math.roundToLong
 fun DialAmountInput(
     amount: Long,
     step: Long,
-    frictionMultiplier: Float,
+    sensitivity: Float,
     onAmountChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 32.sp,
@@ -63,11 +63,11 @@ fun DialAmountInput(
     val animatable = remember { Animatable(amount.toFloat()) }
     val velocityTracker = remember { VelocityTracker() }
     val scope = rememberCoroutineScope()
-    val decay = exponentialDecay<Float>(frictionMultiplier = frictionMultiplier)
+    val decay =
+        remember(sensitivity) { exponentialDecay<Float>(frictionMultiplier = 1 / sensitivity) }
 
     // 外部 amount が変わったら即同期
     LaunchedEffect(amount) {
-        animatable
         if (sync) {
             animatable.snapTo(amount.toFloat())
         }
@@ -78,7 +78,7 @@ fun DialAmountInput(
     }
 
     Surface(
-        modifier = modifier.pointerInput(Unit) {
+        modifier = modifier.pointerInput(sensitivity) {
             detectDragGestures(
                 onDragStart = {
                     isDragging = true
@@ -158,7 +158,7 @@ fun CategorySelector(
         onExpandedChange = { expanded = !expanded },
         modifier = modifier
     ) {
-        AppTextField(
+        TextField(
             value = selected?.name.orEmpty(),
             onValueChange = {},
             readOnly = true,

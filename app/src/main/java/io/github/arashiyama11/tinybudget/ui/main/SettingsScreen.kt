@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
@@ -17,17 +18,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.retained.collectAsRetainedState
 import com.slack.circuit.retained.rememberRetained
@@ -46,10 +47,8 @@ import io.github.arashiyama11.tinybudget.ui.component.AddCategoryDialog
 import io.github.arashiyama11.tinybudget.ui.component.EditCategoryDialog
 import kotlinx.parcelize.Parcelize
 import io.github.arashiyama11.tinybudget.ui.component.PermissionItem
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.platform.LocalContext
-import io.github.arashiyama11.tinybudget.TinyBudgetApp
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 
 @Parcelize
@@ -59,6 +58,8 @@ data object SettingsScreen : Screen {
         val showAddCategoryDialog: Boolean,
         val editingCategory: Category?,
         val permissionStatus: Map<String, Boolean>,
+        val amountStep: Long,
+        val sensitivity: Float,
         val eventSink: (Event) -> Unit
     ) : CircuitUiState
 
@@ -74,6 +75,8 @@ data object SettingsScreen : Screen {
         data class DeleteCategory(val category: Category) : Event
         data object OnResetOverlaySettingsClicked : Event
         data class OnRequestPermission(val permission: String) : Event
+        data class UpdateAmountStep(val step: Long) : Event
+        data class UpdateSensitivity(val sensitivity: Float) : Event
     }
 }
 
@@ -83,6 +86,7 @@ class SettingsPresenter(
     private val settingsRepository: SettingsRepository,
     private val permissionManager: PermissionManager
 ) : Presenter<SettingsScreen.State> {
+
     @Composable
     override fun present(): SettingsScreen.State {
         val scope = rememberStableCoroutineScope()
@@ -91,12 +95,19 @@ class SettingsPresenter(
         var showAddCategoryDialog by rememberRetained { mutableStateOf(false) }
         var editingCategory by rememberRetained { mutableStateOf<Category?>(null) }
         val permissionStatus by rememberRetained { mutableStateOf(getPermissionStatus()) }
+        val amountStep by settingsRepository.amountStep.collectAsRetainedState(initial = 10L)
+        val sensitivity by settingsRepository.sensitivity
+            .collectAsRetainedState(
+                initial = 1f
+            )
 
         return SettingsScreen.State(
             categories = categories,
             showAddCategoryDialog = showAddCategoryDialog,
             editingCategory = editingCategory,
-            permissionStatus = permissionStatus
+            permissionStatus = permissionStatus,
+            amountStep = amountStep,
+            sensitivity = sensitivity
         ) { event ->
             when (event) {
                 is SettingsScreen.Event.NavigateTo -> navigator.goTo(event.screen)
@@ -144,6 +155,18 @@ class SettingsPresenter(
                             "accessibility" -> permissionManager.requestAccessibilityPermission()
                             "notification" -> permissionManager.requestNotificationPermission()
                         }
+                    }
+                }
+
+                is SettingsScreen.Event.UpdateAmountStep -> {
+                    scope.launch {
+                        settingsRepository.setAmountStep(event.step)
+                    }
+                }
+
+                is SettingsScreen.Event.UpdateSensitivity -> {
+                    scope.launch {
+                        settingsRepository.setSensitivity(event.sensitivity)
                     }
                 }
             }
@@ -292,7 +315,67 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
 
             HorizontalDivider()
         }
-        
+
+        item {
+            Card(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = "金額設定", style = MaterialTheme.typography.titleLarge)
+
+                    // 金額ステップ設定
+                    var amountStepText by remember { mutableStateOf(state.amountStep.toString()) }
+                    OutlinedTextField(
+                        value = amountStepText,
+                        onValueChange = { newValue ->
+                            amountStepText = newValue
+                            newValue.toLongOrNull()?.let { step ->
+                                if (step > 0) {
+                                    state.eventSink(SettingsScreen.Event.UpdateAmountStep(step))
+                                }
+                            }
+                        },
+                        label = { Text("金額ステップ") },
+                        supportingText = { Text("金額入力時のステップ値（円）") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        singleLine = true
+                    )
+
+                    // 摩擦係数設定
+                    Text(
+                        text = "感度: ${
+                            String.format(
+                                Locale.JAPAN,
+                                "%.1f",
+                                state.sensitivity
+                            )
+                        }",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = "支出記録の感度を調整します",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Slider(
+                        value = state.sensitivity,
+                        onValueChange = { value ->
+                            state.eventSink(SettingsScreen.Event.UpdateSensitivity(value))
+                        },
+                        valueRange = 0.1f..2.0f,
+                        steps = 18,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            HorizontalDivider()
+        }
+
         item {
             Card(modifier = Modifier.padding(16.dp)) {
                 ListItem(
@@ -303,4 +386,3 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
         }
     }
 }
-
