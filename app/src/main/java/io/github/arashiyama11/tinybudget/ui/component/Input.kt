@@ -5,7 +5,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -46,6 +48,7 @@ import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.roundToLong
 
+@OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun DialAmountInput(
@@ -55,7 +58,8 @@ fun DialAmountInput(
     onAmountChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 32.sp,
-    sync: Boolean = false
+    sync: Boolean = false,
+    onLongPress: () -> Unit = {}
 ) {
     var isDragging by remember { mutableStateOf(false) }
     val elevation by animateDpAsState(if (isDragging) 8.dp else 2.dp)
@@ -77,8 +81,12 @@ fun DialAmountInput(
         animatable.asStateFlow(scope).collect { onAmountChange(it.roundToLong()) }
     }
 
-    Surface(
+Surface(
         modifier = modifier.pointerInput(sensitivity) {
+            detectTapGestures(
+                onLongPress = { onLongPress() }
+            )
+        }.pointerInput(sensitivity) {
             detectDragGestures(
                 onDragStart = {
                     isDragging = true

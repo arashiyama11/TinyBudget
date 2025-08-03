@@ -1,6 +1,8 @@
 package io.github.arashiyama11.tinybudget.ui.overlay
 
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,17 +24,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import io.github.arashiyama11.tinybudget.ui.component.DialAmountInput
 import androidx.compose.ui.unit.sp
 import io.github.arashiyama11.tinybudget.ui.component.CategorySelector
+import io.github.arashiyama11.tinybudget.ui.component.DialAmountInput
+import io.github.arashiyama11.tinybudget.ui.component.NumericInputPad
 
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OverlayUi(overlayViewModel: OverlayViewModel) {
     val uiState by overlayViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // 保存完了トースト表示
     LaunchedEffect(uiState.showSaveConfirmation) {
         if (uiState.showSaveConfirmation) {
             Toast.makeText(context, "保存しました", Toast.LENGTH_SHORT).show()
@@ -40,62 +42,68 @@ fun OverlayUi(overlayViewModel: OverlayViewModel) {
     }
 
     Card(modifier = Modifier.padding(8.dp)) {
-        // Card 内を高さいっぱいに使う
         Column(
             modifier = Modifier
                 .padding(8.dp)
                 .fillMaxWidth()
                 .fillMaxHeight()
         ) {
-            // 上側のコンテンツをスクロール可能＆余った高さを占有
-            Column(
-                modifier = Modifier
-                    .weight(1f, fill = true),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                DialAmountInput(
+            if (uiState.isNumericInputMode) {
+                NumericInputPad(
                     amount = uiState.amount,
-                    step = uiState.amountStep,
-                    sensitivity = uiState.sensitivity,
                     onAmountChange = overlayViewModel::onAmountChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    fontSize = 20.sp,
-                    sync = uiState.sync
+                    onConfirm = overlayViewModel::onToggleNumericInputMode,
+                    modifier = Modifier.weight(1f)
                 )
-
-                CategorySelector(
-                    categories = uiState.categories,
-                    selectedCategoryId = uiState.selectedCategoryId,
-                    onCategorySelected = overlayViewModel::onCategorySelected,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                TextField(
-                    value = uiState.note,
-                    onValueChange = overlayViewModel::onNoteChange,
-                    label = { Text("メモ (任意)", fontSize = 14.sp) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // ここは weight を使わないので、必ず見える
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Button(
-                    onClick = overlayViewModel::saveTransaction,
-                    enabled = uiState.amount > 0 && uiState.selectedCategoryId != null,
-                    modifier = Modifier.height(36.dp)
+            } else {
+                Column(
+                    modifier = Modifier.weight(1f, fill = true),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text("保存", fontSize = 14.sp)
+                    DialAmountInput(
+                        amount = uiState.amount,
+                        step = uiState.amountStep,
+                        sensitivity = uiState.sensitivity,
+                        onAmountChange = overlayViewModel::onAmountChange,
+                        onLongPress = overlayViewModel::onToggleNumericInputMode,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        fontSize = 20.sp,
+                        sync = uiState.sync
+                    )
+
+                    CategorySelector(
+                        categories = uiState.categories,
+                        selectedCategoryId = uiState.selectedCategoryId,
+                        onCategorySelected = overlayViewModel::onCategorySelected,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    TextField(
+                        value = uiState.note,
+                        onValueChange = overlayViewModel::onNoteChange,
+                        label = { Text("メモ (任意)", fontSize = 14.sp) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = overlayViewModel::saveTransaction,
+                        enabled = uiState.amount > 0 && uiState.selectedCategoryId != null,
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("保存", fontSize = 14.sp)
+                    }
                 }
             }
         }

@@ -1,6 +1,5 @@
 package io.github.arashiyama11.tinybudget.ui.overlay
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -17,10 +16,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class OverlayUiState(
+    val isNumericInputMode: Boolean = false,
     val amount: Long = 0L,
     val note: String = "",
     val categories: List<Category> = emptyList(),
@@ -36,7 +35,7 @@ class OverlayViewModel(
     private val categoryRepository: CategoryRepository,
     private val transactionRepository: TransactionRepository,
     private val settingsRepository: SettingsRepository,
-    private val stopSelf: () -> Unit,
+    private val stopSelf: suspend () -> Unit,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OverlayUiState())
@@ -52,19 +51,15 @@ class OverlayViewModel(
     }.stateIn(
         viewModelScope,
         kotlinx.coroutines.flow.SharingStarted.Eagerly,
-        OverlayUiState(
-        )
+        OverlayUiState()
     )
 
     init {
         viewModelScope.launch {
-            // カテゴリ取得とデフォルトカテゴリ設定を並行実行
             categoryRepository.getEnabledCategories().collect { categories ->
                 _uiState.update { it.copy(categories = categories) }
 
-                // カテゴリ取得後にデフォルトカテゴリを設定
                 if (_uiState.value.selectedCategoryId == null && categories.isNotEmpty()) {
-                    // 最後に使用したカテゴリを優先、なければデフォルトカテゴリを使用
                     val lastCategoryId = settingsRepository.lastCategoryId.first()
                     val defaultCategoryId = settingsRepository.defaultCategoryId.first()
 
@@ -82,7 +77,7 @@ class OverlayViewModel(
 
     fun onAmountChange(newAmount: Long) {
         val finalAmount =
-            if (newAmount < 0) 0L else (newAmount / uiState.value.amountStep) * uiState.value.amountStep
+            if (newAmount < 0) 0L else newAmount
         _uiState.update { it.copy(amount = finalAmount) }
     }
 
@@ -90,9 +85,12 @@ class OverlayViewModel(
         _uiState.update { it.copy(note = note) }
     }
 
+    fun onToggleNumericInputMode() {
+        _uiState.update { it.copy(isNumericInputMode = !it.isNumericInputMode) }
+    }
+
     fun onCategorySelected(categoryId: Int) {
         _uiState.update { it.copy(selectedCategoryId = categoryId) }
-        // 最後に選択したカテゴリを保存
         viewModelScope.launch {
             settingsRepository.setLastCategoryId(categoryId)
         }
@@ -123,8 +121,6 @@ class OverlayViewModel(
                     )
                 }
 
-
-                // 一定時間後に通知状態をリセット
                 delay(50)
                 _uiState.update { it.copy(showSaveConfirmation = false, sync = false) }
                 stopSelf()
@@ -135,7 +131,7 @@ class OverlayViewModel(
 
 class OverlayViewModelFactory(
     private val appContainer: AppContainer,
-    private val stopSelf: () -> Unit
+    private val stopSelf: suspend () -> Unit
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(OverlayViewModel::class.java)) {

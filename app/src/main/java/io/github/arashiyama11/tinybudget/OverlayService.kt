@@ -7,7 +7,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.PixelFormat
-import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -18,39 +17,13 @@ import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
@@ -70,9 +43,6 @@ import io.github.arashiyama11.tinybudget.ui.overlay.DraggableOverlay
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayUi
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModel
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModelFactory
-import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -94,7 +64,7 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
     private val overlayViewModel: OverlayViewModel by lazy {
         ViewModelProvider(
             this,
-            OverlayViewModelFactory(appContainer, ::stopSelf)
+            OverlayViewModelFactory(appContainer, ::shutdown)
         )[OverlayViewModel::class.java]
     }
 
@@ -102,6 +72,8 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
         OnBackPressedDispatcher { /* 何もしない */ }
 
     override val onBackPressedDispatcher: OnBackPressedDispatcher = _onBackPressedDispatcher
+
+    private var hasShutdown = false
 
 
     companion object {
@@ -235,16 +207,29 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
 
     override fun onDestroy() {
         super.onDestroy()
-        if (this::composeView.isInitialized) {
-            windowManager.removeView(composeView)
-        }
-        _viewModelStore.clear()
-        isRunning = false
+        if (!hasShutdown)
+            runBlocking {
+                shutdown()
+            }
 
-        runBlocking(Dispatchers.IO) {
-            settingsRepository.setOverlayDestroyedAt(System.currentTimeMillis())
-        }
     }
 
-    override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
+    private suspend fun shutdown() {
+        if (hasShutdown) return
+        hasShutdown = true
+        runCatching {
+            if (this::composeView.isInitialized && composeView.isAttachedToWindow) {
+                windowManager.removeViewImmediate(composeView)
+            }
+            _viewModelStore.clear()
+            isRunning = false
+
+
+            settingsRepository.setOverlayDestroyedAt(System.currentTimeMillis())
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }.onFailure {
+            Log.e("OverlayService", "Error during shutdown", it)
+        }
+    }
 }

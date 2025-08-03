@@ -6,20 +6,21 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.parcelize.Parcelize
 
-@Parcelize
-@JvmInline
-value class TransactionId(val value: String): Parcelable
 
 @Parcelize
 @JvmInline
-value class CategoryId(val value: String): Parcelable
+value class TransactionId(val value: String) : Parcelable
+
+@Parcelize
+@JvmInline
+value class CategoryId(val value: String) : Parcelable
 
 @JvmInline
 value class TriggerAppId(val value: String)
 
 @Parcelize
 @JvmInline
-value class Amount(val value: Long): Parcelable {
+value class Amount(val value: Long) : Parcelable {
     init {
         require(value >= 0) { "Amount must be non-negative" }
     }
@@ -32,7 +33,7 @@ data class Transaction(
     val date: Long,
     val category: Category,
     val note: String,
-): Parcelable
+) : Parcelable
 
 fun Transaction.toEntity(): io.github.arashiyama11.tinybudget.data.local.entity.Transaction {
     return io.github.arashiyama11.tinybudget.data.local.entity.Transaction(
@@ -49,7 +50,7 @@ data class Category(
     val id: CategoryId,
     val name: String,
     val isEnabled: Boolean = true,
-): Parcelable
+) : Parcelable
 
 data class MonthlySummary(
     val year: Int,
