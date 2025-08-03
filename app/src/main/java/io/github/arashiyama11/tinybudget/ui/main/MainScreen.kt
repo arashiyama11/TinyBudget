@@ -1,5 +1,6 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -37,7 +38,9 @@ import io.github.arashiyama11.tinybudget.ui.component.MonthlySummaryPager
 import io.github.arashiyama11.tinybudget.ui.component.TransactionList
 import io.github.arashiyama11.tinybudget.ui.component.TransactionListItem
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.flow.combine
@@ -58,7 +61,7 @@ data class YearMonth(val year: Int, val month: Int) {
 @Parcelize
 data object MainScreen : Screen {
     data class State(
-        val monthSummaries: Map<YearMonth, MonthlySummary?>,
+        val monthSummaries: ImmutableMap<YearMonth, MonthlySummary?>,
         val monthlySummary: MonthlySummary?,
         val transactions: ImmutableList<Transaction>,
         val currentYear: Int,
@@ -95,7 +98,7 @@ class MainPresenter(
 
         val prefetchState by produceRetainedState(
             // 初期値
-            initialValue = PrefetchState(emptyMap(), persistentListOf()),
+            initialValue = PrefetchState(persistentMapOf(), persistentListOf()),
             key1 = currentYm
         ) {
             val ymPrev = currentYm.shifted(-1)
@@ -124,7 +127,7 @@ class MainPresenter(
                     if (ym == currentYm) currentTx = uiTx.toImmutableList()
                 }
 
-                PrefetchState(summaries, currentTx)
+                PrefetchState(summaries.toImmutableMap(), currentTx)
             }.collect { value = it }
         }
 
@@ -171,7 +174,7 @@ class MainPresenter(
 
     /* 内部だけで使う一時データ */
     private data class PrefetchState(
-        val summaries: Map<YearMonth, MonthlySummary?>,
+        val summaries: ImmutableMap<YearMonth, MonthlySummary?>,
         val currentTx: ImmutableList<Transaction>
     )
 
@@ -262,7 +265,8 @@ fun MainUi(state: MainScreen.State, modifier: Modifier) {
             onMonthChanged = { delta ->
                 state.eventSink(MainScreen.Event.ChangeMonth(delta))
             },
-            summaryFor = { y, m -> state.monthSummaries[YearMonth(y, m)] }
+            summaryFor = { y, m -> state.monthSummaries[YearMonth(y, m)] },
+            modifier = Modifier.animateContentSize()
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Transactions", style = MaterialTheme.typography.titleLarge)

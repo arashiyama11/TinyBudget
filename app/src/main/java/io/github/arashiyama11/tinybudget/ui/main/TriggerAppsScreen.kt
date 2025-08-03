@@ -44,6 +44,8 @@ import com.slack.circuit.runtime.internal.rememberStableCoroutineScope
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
 import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -62,7 +64,7 @@ data object TriggerAppsScreen : Screen {
     sealed interface State : CircuitUiState {
         data object Loading : State
         data class Success(
-            val apps: List<AppInfo>,
+            val apps: ImmutableList<AppInfo>,
             val eventSink: (Event) -> Unit
         ) : State
     }
@@ -138,10 +140,10 @@ class TriggerAppsPresenter(
                     .thenBy { it.label }
             )
             TriggerAppsScreen.State.Success(
-                apps = sortedApps,
+                apps = sortedApps.toImmutableList(),
                 eventSink = eventSink
             )
-        }.also { println("Present :$it") }
+        }
     }
 
     class Factory(

@@ -47,6 +47,12 @@ import io.github.arashiyama11.tinybudget.ui.component.AddCategoryDialog
 import io.github.arashiyama11.tinybudget.ui.component.EditCategoryDialog
 import kotlinx.parcelize.Parcelize
 import io.github.arashiyama11.tinybudget.ui.component.PermissionItem
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -54,10 +60,10 @@ import java.util.Locale
 @Parcelize
 data object SettingsScreen : Screen {
     data class State(
-        val categories: List<Category>,
+        val categories: ImmutableList<Category>,
         val showAddCategoryDialog: Boolean,
         val editingCategory: Category?,
-        val permissionStatus: Map<String, Boolean>,
+        val permissionStatus: ImmutableMap<String, Boolean>,
         val amountStep: Long,
         val sensitivity: Float,
         val eventSink: (Event) -> Unit
@@ -90,8 +96,8 @@ class SettingsPresenter(
     @Composable
     override fun present(): SettingsScreen.State {
         val scope = rememberStableCoroutineScope()
-        val categories by categoryRepository.getAllCategories()
-            .collectAsRetainedState(initial = emptyList())
+        val categories by categoryRepository.getAllCategories().map { it.toImmutableList() }
+            .collectAsRetainedState(initial = persistentListOf())
         var showAddCategoryDialog by rememberRetained { mutableStateOf(false) }
         var editingCategory by rememberRetained { mutableStateOf<Category?>(null) }
         val permissionStatus by rememberRetained { mutableStateOf(getPermissionStatus()) }
@@ -173,8 +179,8 @@ class SettingsPresenter(
         }
     }
 
-    private fun getPermissionStatus(): Map<String, Boolean> {
-        return mapOf(
+    private fun getPermissionStatus(): ImmutableMap<String, Boolean> {
+        return persistentMapOf(
             "overlay" to permissionManager.checkOverlayPermission(),
             "accessibility" to permissionManager.checkAccessibilityPermission(),
             "notification" to permissionManager.checkNotificationPermission()

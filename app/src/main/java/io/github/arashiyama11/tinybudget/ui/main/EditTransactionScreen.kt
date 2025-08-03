@@ -49,6 +49,8 @@ import io.github.arashiyama11.tinybudget.Transaction
 import io.github.arashiyama11.tinybudget.toEntity
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 
@@ -56,7 +58,7 @@ import kotlinx.parcelize.Parcelize
 data class EditTransactionScreen(val transaction: Transaction) : Screen {
     data class State(
         val transaction: Transaction,
-        val categories: List<Category>,
+        val categories: ImmutableList<Category>,
         val eventSink: (Event) -> Unit
     ) : CircuitUiState
 
@@ -82,6 +84,7 @@ class EditTransactionPresenter(
         return EditTransactionScreen.State(
             transaction = screen.transaction,
             categories = categories.map { Category(CategoryId(it.id.toString()), it.name, true) }
+                .toImmutableList()
         ) { event ->
             when (event) {
                 is EditTransactionScreen.Event.GoBack -> navigator.pop()
