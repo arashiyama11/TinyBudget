@@ -11,7 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.sample
@@ -24,6 +23,12 @@ class AppLaunchAccessibilityService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         settingsRepository = (application as TinyBudgetApp).appContainer.settingsRepository
+
+        scope.launch {
+            settingsRepository.overlayDestroyedAt.collect {
+                Log.d("AppLaunchAccessibilityService", "Overlay destroyed at: $it")
+            }
+        }
     }
 
     override fun onServiceConnected() {
@@ -47,7 +52,6 @@ class AppLaunchAccessibilityService : AccessibilityService() {
         Log.d("AppLaunchAccessibilityService", "Package launched: $pkg, Event: $event")
         scope.launch {
             val lastDestroyed = settingsRepository.overlayDestroyedAt.first() ?: 0L
-            delay(500)
             if (System.currentTimeMillis() - lastDestroyed < 5000) {
                 Log.d(
                     "AppLaunchAccessibilityService",
