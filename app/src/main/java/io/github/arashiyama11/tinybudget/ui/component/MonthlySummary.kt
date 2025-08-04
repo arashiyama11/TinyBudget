@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -117,14 +117,14 @@ fun MonthlySummaryCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = { onMonthChange(-1) }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Previous month")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous month")
                 }
                 Text(
                     text = "$year/$month",
                     style = MaterialTheme.typography.headlineMedium
                 )
                 IconButton(onClick = { onMonthChange(1) }) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = "Next month")
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next month")
                 }
             }
 

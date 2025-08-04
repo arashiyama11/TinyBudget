@@ -43,8 +43,6 @@ import io.github.arashiyama11.tinybudget.ui.overlay.DraggableOverlay
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayUi
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModel
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModelFactory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
