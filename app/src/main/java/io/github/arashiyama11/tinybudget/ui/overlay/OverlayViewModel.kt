@@ -1,5 +1,6 @@
 package io.github.arashiyama11.tinybudget.ui.overlay
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class OverlayUiState(
@@ -56,6 +58,9 @@ class OverlayViewModel(
 
     init {
         viewModelScope.launch {
+            val lastModeIsNumeric = settingsRepository.isLastModeNumeric.first()
+            _uiState.update { it.copy(isNumericInputMode = lastModeIsNumeric) }
+
             categoryRepository.getEnabledCategories().collect { categories ->
                 _uiState.update { it.copy(categories = categories) }
 
@@ -73,6 +78,13 @@ class OverlayViewModel(
                 }
             }
         }
+
+        viewModelScope.launch {
+            while (isActive) {
+                delay(1000)
+                Log.d("OverlayViewModel", "Heatbeat ${System.identityHashCode(this)}")
+            }
+        }
     }
 
     fun onAmountChange(newAmount: Long) {
@@ -86,7 +98,11 @@ class OverlayViewModel(
     }
 
     fun onToggleNumericInputMode() {
-        _uiState.update { it.copy(isNumericInputMode = !it.isNumericInputMode) }
+        val newMode = !_uiState.value.isNumericInputMode
+        _uiState.update { it.copy(isNumericInputMode = newMode) }
+        viewModelScope.launch {
+            settingsRepository.setLastModeNumeric(newMode)
+        }
     }
 
     fun onCategorySelected(categoryId: Int) {

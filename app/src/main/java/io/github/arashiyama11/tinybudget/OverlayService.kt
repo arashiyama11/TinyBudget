@@ -43,6 +43,8 @@ import io.github.arashiyama11.tinybudget.ui.overlay.DraggableOverlay
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayUi
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModel
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayViewModelFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -163,7 +165,9 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
                     initialPosition = savedPosition,
                     initialSize = savedSize,
                     onExit = {
-                        stopSelf()
+                        runBlocking {
+                            shutdown()
+                        }
                     }
                 ) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -207,28 +211,30 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
 
     override fun onDestroy() {
         super.onDestroy()
-        if (!hasShutdown)
-            runBlocking {
-                shutdown()
-            }
-
+        if (!hasShutdown) {
+            shutdown()
+        }
     }
 
-    private suspend fun shutdown() {
-        if (hasShutdown) return
+    // 一旦はrunBlockingが安定かも
+    fun shutdown() = runBlocking {
+        if (hasShutdown) return@runBlocking
         hasShutdown = true
         runCatching {
-            if (this::composeView.isInitialized && composeView.isAttachedToWindow) {
+            if (this@OverlayService::composeView.isInitialized && composeView.isAttachedToWindow) {
                 windowManager.removeViewImmediate(composeView)
             }
             _viewModelStore.clear()
             isRunning = false
 
-
+            println(1)
             settingsRepository.setOverlayDestroyedAt(System.currentTimeMillis())
+            println(2)
+
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }.onFailure {
+            it.printStackTrace()
             Log.e("OverlayService", "Error during shutdown", it)
         }
     }

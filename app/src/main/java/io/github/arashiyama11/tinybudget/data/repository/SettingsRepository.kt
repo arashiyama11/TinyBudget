@@ -3,6 +3,7 @@ package io.github.arashiyama11.tinybudget.data.repository
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -23,6 +24,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val SENSITIVITY = floatPreferencesKey("sensitivity")
         private val DEFAULT_CATEGORY_ID = intPreferencesKey("default_category_id")
         private val LAST_CATEGORY_ID = intPreferencesKey("last_category_id")
+        private val IS_LAST_MODE_NUMERIC = booleanPreferencesKey("is_last_mode_numeric")
 
         private val OVERLAY_X = floatPreferencesKey("overlay_x")
         private val OVERLAY_Y = floatPreferencesKey("overlay_y")
@@ -44,6 +46,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     val lastCategoryId: Flow<Int?> = dataStore.data
         .map { preferences -> preferences[LAST_CATEGORY_ID] }
+
+    val isLastModeNumeric: Flow<Boolean> = dataStore.data
+        .map { preferences -> preferences[IS_LAST_MODE_NUMERIC] ?: false }
 
     val overlayPosition: Flow<Pair<Float, Float>> = dataStore.data
         .map { preferences ->
@@ -83,6 +88,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setLastCategoryId(id: Int) = withContext(Dispatchers.IO) {
         dataStore.edit { preferences ->
             preferences[LAST_CATEGORY_ID] = id
+        }
+    }
+
+    suspend fun setLastModeNumeric(isNumeric: Boolean) = withContext(Dispatchers.IO) {
+        dataStore.edit { preferences ->
+            preferences[IS_LAST_MODE_NUMERIC] = isNumeric
         }
     }
 

@@ -81,47 +81,49 @@ fun DialAmountInput(
         animatable.asStateFlow(scope).collect { onAmountChange(it.roundToLong()) }
     }
 
-Surface(
-        modifier = modifier.pointerInput(sensitivity) {
-            detectTapGestures(
-                onLongPress = { onLongPress() }
-            )
-        }.pointerInput(sensitivity) {
-            detectDragGestures(
-                onDragStart = {
-                    isDragging = true
-                    scope.launch { animatable.stop() }
-                    velocityTracker.resetTracking()
-                },
-                onDrag = { change, dragAmt ->
-                    change.consume()
-                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+    Surface(
+        modifier = modifier
+            .pointerInput(sensitivity) {
+                detectTapGestures(
+                    onLongPress = { onLongPress() }
+                )
+            }
+            .pointerInput(sensitivity) {
+                detectDragGestures(
+                    onDragStart = {
+                        isDragging = true
+                        scope.launch { animatable.stop() }
+                        velocityTracker.resetTracking()
+                    },
+                    onDrag = { change, dragAmt ->
+                        change.consume()
+                        velocityTracker.addPosition(change.uptimeMillis, change.position)
 
-                    val delta = (dragAmt.y / 40f) * step
-                    scope.launch {
-                        val next = (animatable.value - delta).coerceAtLeast(0f)
-                        animatable.snapTo(next)
+                        val delta = (dragAmt.y / 40f) * step
+                        scope.launch {
+                            val next = (animatable.value - delta).coerceAtLeast(0f)
+                            animatable.snapTo(next)
+                        }
+                    },
+                    onDragEnd = {
+                        isDragging = false
+                        val velocityY = velocityTracker.calculateVelocity().y
+                        val initialVelocity = -velocityY / 40f * step
+                        scope.launch {
+                            animatable.animateDecay(initialVelocity, decay)
+                            val finalStep = (animatable.value / step)
+                                .roundToLong()
+                                .coerceAtLeast(0L)
+                            val finalAmt = finalStep * step
+                            animatable.snapTo(finalAmt.toFloat())
+                            onAmountChange(finalAmt)
+                        }
+                    },
+                    onDragCancel = {
+                        isDragging = false
                     }
-                },
-                onDragEnd = {
-                    isDragging = false
-                    val velocityY = velocityTracker.calculateVelocity().y
-                    val initialVelocity = -velocityY / 40f * step
-                    scope.launch {
-                        animatable.animateDecay(initialVelocity, decay)
-                        val finalStep = (animatable.value / step)
-                            .roundToLong()
-                            .coerceAtLeast(0L)
-                        val finalAmt = finalStep * step
-                        animatable.snapTo(finalAmt.toFloat())
-                        onAmountChange(finalAmt)
-                    }
-                },
-                onDragCancel = {
-                    isDragging = false
-                }
-            )
-        },
+                )
+            },
         shape = RoundedCornerShape(8.dp),
         tonalElevation = elevation,
         color = MaterialTheme.colorScheme.surfaceVariant
@@ -143,7 +145,8 @@ Surface(
                 style = TextStyle(
                     fontSize = dynamicFont,
                     fontWeight = FontWeight.Bold
-                )
+                ), softWrap = true,
+                maxLines = 1
             )
         }
     }
@@ -170,7 +173,14 @@ fun CategorySelector(
             value = selected?.name.orEmpty(),
             onValueChange = {},
             readOnly = true,
-            label = { Text("カテゴリ", fontSize = 14.sp) },
+            label = {
+                Text(
+                    "カテゴリ",
+                    fontSize = 14.sp,
+                    softWrap = true,
+                    maxLines = 1
+                )
+            },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier = Modifier
                 .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
@@ -182,7 +192,14 @@ fun CategorySelector(
         ) {
             categories.forEach { category ->
                 DropdownMenuItem(
-                    text = { Text(category.name, fontSize = 14.sp) },
+                    text = {
+                        Text(
+                            category.name,
+                            fontSize = 14.sp,
+                            softWrap = true,
+                            maxLines = 1
+                        )
+                    },
                     onClick = {
                         onCategorySelected(category.id)
                         expanded = false

@@ -20,6 +20,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import io.github.arashiyama11.tinybudget.Transaction
 import io.github.arashiyama11.tinybudget.ui.main.MainScreen
+import io.github.arashiyama11.tinybudget.util.toJPYString
 import kotlinx.collections.immutable.ImmutableList
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -89,6 +90,9 @@ fun TransactionListItem(
             }
         }
 
-        Text(text = "${transaction.amount.value} JPY", style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = transaction.amount.value.toJPYString(),
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }

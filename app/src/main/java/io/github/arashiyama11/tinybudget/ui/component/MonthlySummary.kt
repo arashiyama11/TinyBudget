@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.fontscaling.MathUtils.lerp
 import io.github.arashiyama11.tinybudget.MonthlySummary
+import io.github.arashiyama11.tinybudget.util.toJPYString
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlin.math.absoluteValue
@@ -130,7 +131,7 @@ fun MonthlySummaryCard(
             if (summary != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Total: ${summary.totalAmount.value} JPY",
+                    text = "Total: ${summary.totalAmount.value.toJPYString()}",
                     style = MaterialTheme.typography.titleLarge
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -145,7 +146,7 @@ fun MonthlySummaryCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(text = category.name)
-                        Text(text = "${amount.value} JPY")
+                        Text(text = amount.value.toJPYString())
                     }
                 }
             } else {
