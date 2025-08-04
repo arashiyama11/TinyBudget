@@ -5,13 +5,17 @@ import io.github.arashiyama11.tinybudget.data.local.entity.Transaction
 import kotlinx.coroutines.flow.Flow
 import java.util.Calendar
 
-class TransactionRepository(private val transactionDao: TransactionDao) {
+interface TransactionRepository {
+    fun getTransactionsByMonth(year: Int, month: Int): Flow<List<Transaction>>
+    suspend fun addTransaction(transaction: Transaction)
+    suspend fun updateTransaction(transaction: Transaction)
+    suspend fun deleteTransaction(transaction: Transaction)
+}
 
-    fun getAllTransactions(): Flow<List<Transaction>> {
-        return transactionDao.getAll()
-    }
 
-    fun getTransactionsByMonth(year: Int, month: Int): Flow<List<Transaction>> {
+class TransactionRepositoryImpl(private val transactionDao: TransactionDao) :
+    TransactionRepository {
+    override fun getTransactionsByMonth(year: Int, month: Int): Flow<List<Transaction>> {
         val cal = Calendar.getInstance()
         cal.set(year, month - 1, 1, 0, 0, 0)
         val startOfMonth = cal.timeInMillis
@@ -20,15 +24,15 @@ class TransactionRepository(private val transactionDao: TransactionDao) {
         return transactionDao.getByMonth(startOfMonth, endOfMonth)
     }
 
-    suspend fun addTransaction(transaction: Transaction) {
+    override suspend fun addTransaction(transaction: Transaction) {
         transactionDao.insert(transaction)
     }
 
-    suspend fun updateTransaction(transaction: Transaction) {
+    override suspend fun updateTransaction(transaction: Transaction) {
         transactionDao.update(transaction)
     }
 
-    suspend fun deleteTransaction(transaction: Transaction) {
+    override suspend fun deleteTransaction(transaction: Transaction) {
         transactionDao.delete(transaction)
     }
 }
