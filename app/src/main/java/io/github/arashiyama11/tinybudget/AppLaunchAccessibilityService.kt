@@ -23,12 +23,6 @@ class AppLaunchAccessibilityService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         settingsRepository = (application as TinyBudgetApp).appContainer.settingsRepository
-
-        scope.launch {
-            settingsRepository.overlayDestroyedAt.collect {
-                Log.d("AppLaunchAccessibilityService", "Overlay destroyed at: $it")
-            }
-        }
     }
 
     override fun onServiceConnected() {

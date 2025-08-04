@@ -225,9 +225,7 @@ class OverlayService : LifecycleService(), ViewModelStoreOwner, SavedStateRegist
             _viewModelStore.clear()
             isRunning = false
 
-            println(1)
             settingsRepository.setOverlayDestroyedAt(System.currentTimeMillis())
-            println(2)
 
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()

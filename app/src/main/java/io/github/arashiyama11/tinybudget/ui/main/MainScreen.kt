@@ -8,12 +8,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.InternalComposeApi
+import androidx.compose.runtime.RecomposeScope
+import androidx.compose.runtime.currentComposer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.slack.circuit.foundation.rememberPresenter
 import com.slack.circuit.retained.produceRetainedState
 import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.CircuitContext
@@ -33,16 +37,19 @@ import io.github.arashiyama11.tinybudget.data.local.entity.Category as CategoryE
 import io.github.arashiyama11.tinybudget.data.local.entity.Transaction as TransactionEntity
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository
 import io.github.arashiyama11.tinybudget.data.repository.TransactionRepository
+import io.github.arashiyama11.tinybudget.ui.component.BottomNavItem
 import io.github.arashiyama11.tinybudget.ui.component.DeleteConfirmationDialog
 import io.github.arashiyama11.tinybudget.ui.component.MonthlySummaryPager
 import io.github.arashiyama11.tinybudget.ui.component.TransactionList
 import io.github.arashiyama11.tinybudget.ui.component.TransactionListItem
+import io.github.arashiyama11.tinybudget.ui.theme.PreviewOf
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
@@ -276,8 +283,10 @@ fun MainUi(state: MainScreen.State, modifier: Modifier) {
 }
 
 @Composable
-@Preview
-fun TransactionItemPreview() {
+@Preview(
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
+)
+fun TransactionItemPreview() = PreviewOf {
     val transaction = Transaction(
         id = TransactionId("1"),
         amount = Amount(1000),

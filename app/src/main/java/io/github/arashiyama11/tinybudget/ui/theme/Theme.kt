@@ -2,9 +2,11 @@ package io.github.arashiyama11.tinybudget.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldColors
@@ -164,12 +166,14 @@ val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> {
 }
 
 @Composable
-fun PreviewOf(content: @Composable () -> Unit) {
+fun PreviewOf(content: @Composable ColumnScope.() -> Unit) {
     TinyBudgetTheme {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            content()
+        Surface {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                content()
+            }
         }
     }
 }
