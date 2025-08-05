@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.LocalTextStyle
@@ -79,14 +81,18 @@ fun OverlayUi(overlayViewModel: OverlayViewModel) {
         ) {
             Column(
                 modifier = Modifier
-                    .weight(1f, fill = true),
+                    .weight(1f, fill = true).run {
+                        if (uiState.isNumericInputMode)
+                            verticalScroll(rememberScrollState())
+                        else this
+                    },
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 if (uiState.isNumericInputMode) {
                     NumericInputPad(
                         amount = uiState.amount,
                         onAmountChange = overlayViewModel::onAmountChange,
-                        onConfirm = overlayViewModel::onToggleNumericInputMode,
+                        onConfirm = overlayViewModel::saveTransaction,
                         onLongPress = overlayViewModel::onToggleNumericInputMode,
                     )
                 } else {
@@ -193,7 +199,7 @@ private fun PreviewOverlayUi() {
 
     PreviewOf {
         Box(
-            modifier = Modifier.size(200.dp, 200.dp)
+            modifier = Modifier.size(200.dp, 400.dp)
         ) {
             OverlayUi(overlayViewModel = overlayViewModel)
         }
