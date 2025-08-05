@@ -69,25 +69,28 @@ fun EditCategoryDialog(
             )
         },
         confirmButton = {
-            Button(
-                onClick = { onConfirm(category.copy(name = text)) },
-                enabled = text.isNotBlank()
-            ) {
-                Text("更新")
-            }
-        },
-        dismissButton = {
             Column {
-                Button(onClick = onDismiss) {
-                    Text("キャンセル")
+                Button(
+                    onClick = { onConfirm(category.copy(name = text)) },
+                    enabled = text.isNotBlank()
+                ) {
+                    Text("更新")
                 }
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // confirmではないけど位置的にここがいい
                 TextButton(
                     onClick = { onDelete(category) },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("削除")
                 }
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("キャンセル")
             }
         }
     )

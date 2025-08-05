@@ -125,19 +125,6 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerLow = Color(0xFFEFEFEF),
     surfaceContainerLowest = Color(0xFFECECEC),
 )
-private val FocusBlue = Color(0xFF7790ED)
-
-
-val AppTextFieldColors: TextFieldColors
-    @Composable
-    get() = TextFieldDefaults.colors(
-        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-        cursorColor = FocusBlue,
-        focusedIndicatorColor = FocusBlue,
-        focusedLabelColor = FocusBlue,
-        focusedLeadingIconColor = MaterialTheme.colorScheme.onSurface,
-    )
 
 @Composable
 fun TinyBudgetTheme(

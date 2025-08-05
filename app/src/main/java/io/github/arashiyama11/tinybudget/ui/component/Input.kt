@@ -68,7 +68,7 @@ fun DialAmountInput(
     val velocityTracker = remember { VelocityTracker() }
     val scope = rememberCoroutineScope()
     val decay =
-        remember(sensitivity) { exponentialDecay<Float>(frictionMultiplier = 1 / sensitivity) }
+        remember(sensitivity) { exponentialDecay<Float>(frictionMultiplier = 1f) }
 
     // 外部 amount が変わったら即同期
     LaunchedEffect(amount) {
@@ -107,7 +107,7 @@ fun DialAmountInput(
                     },
                     onDragEnd = {
                         isDragging = false
-                        val velocityY = velocityTracker.calculateVelocity().y
+                        val velocityY = velocityTracker.calculateVelocity().y * sensitivity
                         val initialVelocity = -velocityY / 40f * step
                         scope.launch {
                             animatable.animateDecay(initialVelocity, decay)
@@ -185,6 +185,7 @@ fun CategorySelector(
             modifier = Modifier
                 .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                 .heightIn(min = 48.dp)
+                .fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,

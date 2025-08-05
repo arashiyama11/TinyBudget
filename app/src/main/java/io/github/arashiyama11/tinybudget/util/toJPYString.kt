@@ -4,8 +4,9 @@ import java.text.NumberFormat
 import java.util.Locale
 
 
+private val formatter = NumberFormat.getNumberInstance(Locale.JAPAN)
 fun Number.toJPYString(): String {
-    NumberFormat.getNumberInstance(Locale.JAPAN).format(this).let { formattedNumber ->
+    formatter.format(this).let { formattedNumber ->
         return "¥$formattedNumber"
     }
 }

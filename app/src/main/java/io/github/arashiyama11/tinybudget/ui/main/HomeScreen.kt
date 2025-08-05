@@ -1,6 +1,7 @@
 package io.github.arashiyama11.tinybudget.ui.main
 
 import android.content.Intent
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -85,7 +86,10 @@ fun HomeUi(state: HomeScreen.State, modifier: Modifier) {
                 onTabSelected = { screen ->
                     scope.launch {
                         val page = if (screen is MainScreen) 0 else 1
-                        pagerState.scrollToPage(page)
+                        pagerState.animateScrollToPage(
+                            page,
+                            animationSpec = tween()
+                        )
                     }
                 }
             )
