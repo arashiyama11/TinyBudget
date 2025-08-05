@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -55,6 +56,7 @@ fun DialAmountInput(
     amount: Long,
     step: Long,
     sensitivity: Float,
+    frictionMultiplier: Float,
     onAmountChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 32.sp,
@@ -68,7 +70,10 @@ fun DialAmountInput(
     val velocityTracker = remember { VelocityTracker() }
     val scope = rememberCoroutineScope()
     val decay =
-        remember(sensitivity) { exponentialDecay<Float>(frictionMultiplier = 1f) }
+        remember(
+            sensitivity,
+            frictionMultiplier
+        ) { exponentialDecay<Float>(frictionMultiplier = frictionMultiplier) }
 
     // 外部 amount が変わったら即同期
     LaunchedEffect(amount) {
@@ -88,7 +93,7 @@ fun DialAmountInput(
                     onLongPress = { onLongPress() }
                 )
             }
-            .pointerInput(sensitivity) {
+            .pointerInput(sensitivity, frictionMultiplier) {
                 detectDragGestures(
                     onDragStart = {
                         isDragging = true
@@ -139,14 +144,20 @@ fun DialAmountInput(
                 .roundToLong()
                 .coerceAtLeast(0L) * step
 
-            Text(
+            AutoSizeText(
                 text = NumberFormat.getCurrencyInstance(Locale.JAPAN)
                     .format(displayValue),
                 style = TextStyle(
                     fontSize = dynamicFont,
                     fontWeight = FontWeight.Bold
-                ), softWrap = true,
-                maxLines = 1
+                ),
+                softWrap = true,
+                maxLines = 1,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 12.sp,
+                    maxFontSize = 30.sp,
+                    stepSize = 1.sp
+                ),
             )
         }
     }

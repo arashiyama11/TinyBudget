@@ -28,6 +28,7 @@ interface SettingsRepository {
     val triggerApps: Flow<Set<String>>
     val amountStep: Flow<Long>
     val sensitivity: Flow<Float>
+    val frictionMultiplier: Flow<Float>
 
     suspend fun setDefaultCategoryId(id: Int)
     suspend fun setLastCategoryId(id: Int)
@@ -39,6 +40,7 @@ interface SettingsRepository {
     suspend fun setTriggerApps(packageNames: Set<String>)
     suspend fun setAmountStep(step: Long)
     suspend fun setSensitivity(multiplier: Float)
+    suspend fun setFrictionMultiplier(multiplier: Float)
 }
 
 class SettingsRepositoryImpl(private val dataStore: DataStore<Preferences>) : SettingsRepository {
@@ -46,6 +48,7 @@ class SettingsRepositoryImpl(private val dataStore: DataStore<Preferences>) : Se
     companion object {
         val AMOUNT_STEP = longPreferencesKey("amount_step")
         val SENSITIVITY = floatPreferencesKey("sensitivity")
+        val FRICTION_MULTIPLIER = floatPreferencesKey("friction_multiplier")
         private val DEFAULT_CATEGORY_ID = intPreferencesKey("default_category_id")
         private val LAST_CATEGORY_ID = intPreferencesKey("last_category_id")
         private val IS_LAST_MODE_NUMERIC = booleanPreferencesKey("is_last_mode_numeric")
@@ -102,6 +105,9 @@ class SettingsRepositoryImpl(private val dataStore: DataStore<Preferences>) : Se
     override val sensitivity: Flow<Float> =
         dataStore.data
             .map { preferences -> preferences[SENSITIVITY] ?: 1f }
+
+    override val frictionMultiplier: Flow<Float> = dataStore.data
+        .map { preferences -> preferences[FRICTION_MULTIPLIER] ?: 1f }
 
     override suspend fun setDefaultCategoryId(id: Int): Unit = withContext(Dispatchers.IO) {
         dataStore.edit { preferences ->
@@ -171,4 +177,11 @@ class SettingsRepositoryImpl(private val dataStore: DataStore<Preferences>) : Se
             preferences[SENSITIVITY] = multiplier
         }
     }
+
+    override suspend fun setFrictionMultiplier(multiplier: Float): Unit =
+        withContext(Dispatchers.IO) {
+            dataStore.edit { preferences ->
+                preferences[FRICTION_MULTIPLIER] = multiplier
+            }
+        }
 }

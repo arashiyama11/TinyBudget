@@ -121,6 +121,7 @@ fun OverlayUi(overlayViewModel: OverlayViewModel) {
                         amount = uiState.amount,
                         step = uiState.amountStep,
                         sensitivity = uiState.sensitivity,
+                        frictionMultiplier = uiState.frictionMultiplier,
                         onAmountChange = overlayViewModel::onAmountChange,
                         onLongPress = overlayViewModel::onToggleNumericInputMode,
                         modifier = Modifier.onGloballyPositioned {
@@ -277,6 +278,8 @@ private val mockSettingsRepository = object : SettingsRepository {
         get() = MutableStateFlow(10)
     override val sensitivity: Flow<Float>
         get() = MutableStateFlow(1f)
+    override val frictionMultiplier: Flow<Float>
+        get() = MutableStateFlow(1f)
 
     override suspend fun setDefaultCategoryId(id: Int) {
         (defaultCategoryId as MutableStateFlow<Int?>).value = id
@@ -317,6 +320,10 @@ private val mockSettingsRepository = object : SettingsRepository {
 
     override suspend fun setSensitivity(multiplier: Float) {
         (sensitivity as MutableStateFlow<Float>).value = multiplier
+    }
+
+    override suspend fun setFrictionMultiplier(multiplier: Float) {
+        (frictionMultiplier as MutableStateFlow<Float>).value = multiplier
     }
 }
 

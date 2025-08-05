@@ -1,5 +1,6 @@
 package io.github.arashiyama11.tinybudget.ui.component
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -11,9 +12,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -29,8 +31,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.NumberFormat
-import java.util.Locale
+import io.github.arashiyama11.tinybudget.util.toJPYString
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -78,20 +79,24 @@ fun NumericInputPad(
         modifier = modifier.padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "¥" + NumberFormat.getNumberInstance(Locale.JAPAN)
-                .format(internalAmount.toLongOrNull() ?: 0L),
-            fontSize = 32.sp,
+        AutoSizePreferSingleLineText(
+            text = (internalAmount.toLongOrNull() ?: 0L).toJPYString(),
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
+                .animateContentSize()
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onLongPress = {
                             onLongPress()
                         }
                     )
-                }
+                },
+            autoSize = TextAutoSize.StepBased(
+                minFontSize = 12.sp,
+                maxFontSize = 30.sp,
+                stepSize = 1.sp
+            ),
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -129,7 +134,7 @@ fun NumericInputPad(
                         },
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Icon(Icons.Default.Backspace, contentDescription = "Backspace")
+                    Icon(Icons.AutoMirrored.Filled.Backspace, contentDescription = "Backspace")
                 }
                 Button(
                     onClick = { onNumberClick(0) },

@@ -28,6 +28,7 @@ data class OverlayUiState(
     val showSaveConfirmation: Boolean = false,
     val sync: Boolean = false,
     val sensitivity: Float = 1f,
+    val frictionMultiplier: Float = 1f,
     val amountStep: Long = 10L,
 )
 
@@ -42,10 +43,12 @@ class OverlayViewModel(
     val uiState: StateFlow<OverlayUiState> = combine(
         _uiState,
         settingsRepository.sensitivity,
+        settingsRepository.frictionMultiplier,
         settingsRepository.amountStep
-    ) { state, sensitivity, amountStep ->
+    ) { state, sensitivity, frictionMultiplier, amountStep ->
         state.copy(
             sensitivity = sensitivity,
+            frictionMultiplier = frictionMultiplier,
             amountStep = amountStep,
         )
     }.stateIn(

@@ -66,6 +66,7 @@ data object SettingsScreen : Screen {
         val permissionStatus: ImmutableMap<String, Boolean>,
         val amountStep: Long,
         val sensitivity: Float,
+        val frictionMultiplier: Float,
         val eventSink: (Event) -> Unit
     ) : CircuitUiState
 
@@ -83,6 +84,7 @@ data object SettingsScreen : Screen {
         data class OnRequestPermission(val permission: String) : Event
         data class UpdateAmountStep(val step: Long) : Event
         data class UpdateSensitivity(val sensitivity: Float) : Event
+        data class UpdateFrictionMultiplier(val frictionMultiplier: Float) : Event
     }
 }
 
@@ -106,6 +108,9 @@ class SettingsPresenter(
             .collectAsRetainedState(
                 initial = 1f
             )
+        val frictionMultiplier by settingsRepository.frictionMultiplier.collectAsRetainedState(
+            initial = 1f
+        )
 
         return SettingsScreen.State(
             categories = categories,
@@ -113,7 +118,8 @@ class SettingsPresenter(
             editingCategory = editingCategory,
             permissionStatus = permissionStatus,
             amountStep = amountStep,
-            sensitivity = sensitivity
+            sensitivity = sensitivity,
+            frictionMultiplier = frictionMultiplier
         ) { event ->
             when (event) {
                 is SettingsScreen.Event.NavigateTo -> navigator.goTo(event.screen)
@@ -173,6 +179,12 @@ class SettingsPresenter(
                 is SettingsScreen.Event.UpdateSensitivity -> {
                     scope.launch {
                         settingsRepository.setSensitivity(event.sensitivity)
+                    }
+                }
+
+                is SettingsScreen.Event.UpdateFrictionMultiplier -> {
+                    scope.launch {
+                        settingsRepository.setFrictionMultiplier(event.frictionMultiplier)
                     }
                 }
             }
@@ -372,8 +384,37 @@ fun SettingsUi(state: SettingsScreen.State, modifier: Modifier) {
                         onValueChange = { value ->
                             state.eventSink(SettingsScreen.Event.UpdateSensitivity(value))
                         },
-                        valueRange = 0.1f..2.0f,
-                        steps = 18,
+                        valueRange = 0.1f..3.0f,
+                        steps = 28,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    // 摩擦係数設定
+                    Text(
+                        text = "摩擦係数: ${
+                            String.format(
+                                Locale.JAPAN,
+                                "%.2f",
+                                state.frictionMultiplier
+                            )
+                        }",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = "支出記録のダイヤルの摩擦係数を調整します",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Slider(
+                        value = state.frictionMultiplier,
+                        onValueChange = { value ->
+                            state.eventSink(SettingsScreen.Event.UpdateFrictionMultiplier(value))
+                        },
+                        valueRange = 0.1f..3.0f,
+                        steps = 28,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
