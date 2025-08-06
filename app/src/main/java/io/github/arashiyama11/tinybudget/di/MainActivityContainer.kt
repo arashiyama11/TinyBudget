@@ -1,6 +1,7 @@
 package io.github.arashiyama11.tinybudget.di
 
 import androidx.activity.ComponentActivity
+import com.slack.circuit.runtime.presenter.Presenter
 import io.github.arashiyama11.tinybudget.PermissionManager
 import io.github.arashiyama11.tinybudget.ui.main.EditTransactionPresenter
 import io.github.arashiyama11.tinybudget.ui.main.HomePresenter
@@ -8,6 +9,7 @@ import io.github.arashiyama11.tinybudget.ui.main.MainPresenter
 import io.github.arashiyama11.tinybudget.ui.main.OnBoardingPresenter
 import io.github.arashiyama11.tinybudget.ui.main.SettingsPresenter
 import io.github.arashiyama11.tinybudget.ui.main.TriggerAppsPresenter
+import kotlinx.collections.immutable.persistentSetOf
 
 class MainActivityContainer(
     appContainer: AppContainer,
@@ -15,7 +17,6 @@ class MainActivityContainer(
 ) {
 
     val permissionManager = PermissionManager(context)
-
     val onBoardingPresenterFactory = OnBoardingPresenter.Factory(
         permissionManager = permissionManager
     )
@@ -40,4 +41,13 @@ class MainActivityContainer(
         context = context
     )
 
+
+    val presenterFactories: Iterable<Presenter.Factory> = persistentSetOf(
+        onBoardingPresenterFactory,
+        homePresenterFactory,
+        mainPresenterFactory,
+        settingsPresenterFactory,
+        editTransactionPresenterFactory,
+        triggerAppsPresenterFactory
+    )
 }

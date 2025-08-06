@@ -17,14 +17,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.slack.circuit.retained.rememberRetained
 import com.slack.circuit.runtime.CircuitContext
+import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
+import io.github.arashiyama11.tinybudget.BuildConfig
 import io.github.arashiyama11.tinybudget.PermissionManager
 import io.github.arashiyama11.tinybudget.ui.theme.LocalSnackbarHostState
 import kotlinx.coroutines.CoroutineScope
@@ -39,7 +42,7 @@ data object OnBoardingScreen : Screen {
         val eventSink: (Event) -> Unit
     ) : CircuitUiState
 
-    sealed interface Event {
+    sealed interface Event : CircuitUiEvent {
         data object OnGrantNotificationClicked : Event
         data object OnGrantOverlayClicked : Event
         data object OnGrantAccessibilityClicked : Event
@@ -185,8 +188,9 @@ fun OnBoardingUi(state: OnBoardingScreen.State, modifier: Modifier = Modifier) {
                 PermissionPhase.GrantNotification -> {
                     PermissionStep(
                         title = "通知へのアクセス",
-                        description = "支出を自動で記録するために、通知へのアクセスを許可してください。",
+                        description = "通知へのアクセスを許可してください。",
                         buttonText = "通知へのアクセスを許可",
+                        suggestionText = "オーバーレイ表示のために通知権限が必要です。",
                         onButtonClick = { state.eventSink(OnBoardingScreen.Event.OnGrantNotificationClicked) }
                     )
                 }
@@ -194,7 +198,8 @@ fun OnBoardingUi(state: OnBoardingScreen.State, modifier: Modifier = Modifier) {
                 PermissionPhase.GrantOverlay -> {
                     PermissionStep(
                         title = "他のアプリの上に表示",
-                        description = "入力フォームを素早く表示するために、オーバーレイ表示を許可してください。",
+                        description = "他のアプリを開いている時も金額入力を可能にするために、オーバーレイ表示を許可してください。",
+                        suggestionText = "ボタンを押したらTinyBudgetを選択してオーバーレイ権限を許可してください。",
                         buttonText = "オーバーレイ表示を許可",
                         onButtonClick = { state.eventSink(OnBoardingScreen.Event.OnGrantOverlayClicked) }
                     )
@@ -203,15 +208,19 @@ fun OnBoardingUi(state: OnBoardingScreen.State, modifier: Modifier = Modifier) {
                 PermissionPhase.GrantAccessibility -> {
                     PermissionStep(
                         title = "ユーザー補助機能",
-                        description = "入力内容を自動で確定するために、ユーザー補助機能を有効にしてください。",
+                        description = "他のアプリの起動時に自動でTinyBudgetを起動するために、ユーザー補助機能を有効にしてください。",
+                        suggestionText = "ユーザー補助機能はユーザーが設定したアプリの起動検知のみに利用されます。",
                         buttonText = "ユーザー補助機能を有効にする",
                         onButtonClick = { state.eventSink(OnBoardingScreen.Event.OnGrantAccessibilityClicked) }
                     )
 
-                    Button({
-                        state.eventSink(OnBoardingScreen.Event.OnCompleteClicked)
-                    }) {
-                        Text(text = "スキップ for debugging")
+                    @Suppress("SENSELESS_COMPARISON")
+                    if (BuildConfig.BUILD_TYPE == "debug") {
+                        Button({
+                            state.eventSink(OnBoardingScreen.Event.OnCompleteClicked)
+                        }) {
+                            Text(text = "スキップ for debugging")
+                        }
                     }
                 }
 
@@ -233,6 +242,7 @@ private fun PermissionStep(
     title: String,
     description: String,
     buttonText: String,
+    suggestionText: String? = null,
     onButtonClick: () -> Unit
 ) {
     Text(
@@ -246,6 +256,15 @@ private fun PermissionStep(
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center
     )
+    if (suggestionText != null) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = suggestionText,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.alpha(0.7f)
+        )
+    }
     Spacer(modifier = Modifier.height(32.dp))
     Button(onClick = onButtonClick) {
         Text(text = buttonText)

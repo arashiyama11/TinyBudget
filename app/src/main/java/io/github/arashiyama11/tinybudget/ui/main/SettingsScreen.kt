@@ -102,7 +102,7 @@ class SettingsPresenter(
             .collectAsRetainedState(initial = persistentListOf())
         var showAddCategoryDialog by rememberRetained { mutableStateOf(false) }
         var editingCategory by rememberRetained { mutableStateOf<Category?>(null) }
-        val permissionStatus by rememberRetained { mutableStateOf(getPermissionStatus()) }
+        var permissionStatus by rememberRetained { mutableStateOf(getPermissionStatus()) }
         val amountStep by settingsRepository.amountStep.collectAsRetainedState(initial = 10L)
         val sensitivity by settingsRepository.sensitivity
             .collectAsRetainedState(
@@ -167,6 +167,7 @@ class SettingsPresenter(
                             "accessibility" -> permissionManager.requestAccessibilityPermission()
                             "notification" -> permissionManager.requestNotificationPermission()
                         }
+                        permissionStatus = getPermissionStatus()
                     }
                 }
 

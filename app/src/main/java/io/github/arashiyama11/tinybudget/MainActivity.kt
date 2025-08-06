@@ -6,7 +6,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
 import com.slack.circuit.backstack.rememberSaveableBackStack
 import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.foundation.CircuitCompositionLocals
@@ -43,37 +42,35 @@ class MainActivity : AppCompatActivity() {
 
         container = MainActivityContainer(appContainer, this)
 
+
         val circuit = Circuit.Builder()
-            .addPresenterFactory(container.onBoardingPresenterFactory)
+            .addPresenterFactories(container.presenterFactories)
             .addUi<OnBoardingScreen, OnBoardingScreen.State> { uiState, modifier ->
                 OnBoardingUi(uiState, modifier)
             }
-            .addPresenterFactory(container.homePresenterFactory)
             .addUi<HomeScreen, HomeScreen.State> { uiState, modifier ->
                 HomeUi(uiState, modifier)
             }
-            .addPresenterFactory(container.mainPresenterFactory)
             .addUi<MainScreen, MainScreen.State> { uiState, modifier ->
                 MainUi(uiState, modifier)
             }
-            .addPresenterFactory(container.settingsPresenterFactory)
             .addUi<SettingsScreen, SettingsScreen.State> { uiState, modifier ->
                 SettingsUi(uiState, modifier)
             }
-            .addPresenterFactory(container.editTransactionPresenterFactory)
             .addUi<EditTransactionScreen, EditTransactionScreen.State> { uiState, modifier ->
                 EditTransactionUi(uiState, modifier)
             }
-            .addPresenterFactory(container.triggerAppsPresenterFactory)
             .addUi<TriggerAppsScreen, TriggerAppsScreen.State> { uiState, modifier ->
                 TriggerAppsUi(uiState, modifier)
             }
             .build()
 
+
+        val snackbarHostState = SnackbarHostState()
+
         setContent {
             val backStack = rememberSaveableBackStack(root = OnBoardingScreen)
             val navigator = rememberCircuitNavigator(backStack)
-            val snackbarHostState = remember { SnackbarHostState() }
             TinyBudgetTheme {
                 CircuitCompositionLocals(circuit) {
                     CompositionLocalProvider(
