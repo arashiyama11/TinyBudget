@@ -1,13 +1,17 @@
 package io.github.arashiyama11.tinybudget
 
 import android.app.Application
-import io.github.arashiyama11.tinybudget.data.AppContainer
-import io.github.arashiyama11.tinybudget.data.DefaultAppContainer
+import android.content.Context
+import io.github.arashiyama11.tinybudget.di.AppContainer
+import io.github.arashiyama11.tinybudget.di.DefaultAppContainer
 import io.github.arashiyama11.tinybudget.data.local.entity.Category
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+val Context.tinyBudgetApp get() = applicationContext as TinyBudgetApp
+val Context.appContainer get() = tinyBudgetApp.appContainer
 
 class TinyBudgetApp : Application() {
 

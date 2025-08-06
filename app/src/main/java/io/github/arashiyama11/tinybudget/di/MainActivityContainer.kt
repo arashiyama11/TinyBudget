@@ -1,14 +1,21 @@
-package io.github.arashiyama11.tinybudget.ui.main
+package io.github.arashiyama11.tinybudget.di
 
-import android.content.Context
+import androidx.activity.ComponentActivity
 import io.github.arashiyama11.tinybudget.PermissionManager
-import io.github.arashiyama11.tinybudget.data.AppContainer
+import io.github.arashiyama11.tinybudget.ui.main.EditTransactionPresenter
+import io.github.arashiyama11.tinybudget.ui.main.HomePresenter
+import io.github.arashiyama11.tinybudget.ui.main.MainPresenter
+import io.github.arashiyama11.tinybudget.ui.main.OnBoardingPresenter
+import io.github.arashiyama11.tinybudget.ui.main.SettingsPresenter
+import io.github.arashiyama11.tinybudget.ui.main.TriggerAppsPresenter
 
 class MainActivityContainer(
     appContainer: AppContainer,
-    permissionManager: PermissionManager,
-    context: Context
+    context: ComponentActivity
 ) {
+
+    val permissionManager = PermissionManager(context)
+
     val onBoardingPresenterFactory = OnBoardingPresenter.Factory(
         permissionManager = permissionManager
     )
@@ -32,4 +39,5 @@ class MainActivityContainer(
         settingsRepository = appContainer.settingsRepository,
         context = context
     )
+
 }

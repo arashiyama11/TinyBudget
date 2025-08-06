@@ -16,7 +16,7 @@ import io.github.arashiyama11.tinybudget.ui.main.EditTransactionScreen
 import io.github.arashiyama11.tinybudget.ui.main.EditTransactionUi
 import io.github.arashiyama11.tinybudget.ui.main.HomeScreen
 import io.github.arashiyama11.tinybudget.ui.main.HomeUi
-import io.github.arashiyama11.tinybudget.ui.main.MainActivityContainer
+import io.github.arashiyama11.tinybudget.di.MainActivityContainer
 import io.github.arashiyama11.tinybudget.ui.main.MainScreen
 import io.github.arashiyama11.tinybudget.ui.main.MainUi
 import io.github.arashiyama11.tinybudget.ui.main.OnBoardingScreen
@@ -30,21 +30,18 @@ import io.github.arashiyama11.tinybudget.ui.theme.TinyBudgetTheme
 
 class MainActivity : AppCompatActivity() {
 
-    private val permissionManager by lazy { PermissionManager(this) }
     private lateinit var container: MainActivityContainer
 
     override fun onResume() {
         super.onResume()
-        // 設定画面から戻ってきたときに呼び出し
-        permissionManager.onActivityResumed()
+        container.permissionManager.onActivityResumed()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val appContainer = (application as TinyBudgetApp).appContainer
-        container = MainActivityContainer(appContainer, permissionManager, this)
+        container = MainActivityContainer(appContainer, this)
 
         val circuit = Circuit.Builder()
             .addPresenterFactory(container.onBoardingPresenterFactory)

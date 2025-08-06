@@ -3,7 +3,7 @@ package io.github.arashiyama11.tinybudget.ui.overlay
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.github.arashiyama11.tinybudget.data.AppContainer
+import io.github.arashiyama11.tinybudget.di.AppContainer
 import io.github.arashiyama11.tinybudget.data.local.entity.Category
 import io.github.arashiyama11.tinybudget.data.local.entity.Transaction
 import io.github.arashiyama11.tinybudget.data.repository.CategoryRepository

@@ -1,4 +1,4 @@
-package io.github.arashiyama11.tinybudget.data
+package io.github.arashiyama11.tinybudget.di
 
 import android.content.Context
 import io.github.arashiyama11.tinybudget.data.local.database.AppDatabase

@@ -37,7 +37,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import io.github.arashiyama11.tinybudget.data.AppContainer
+import io.github.arashiyama11.tinybudget.di.AppContainer
 import io.github.arashiyama11.tinybudget.data.repository.SettingsRepository
 import io.github.arashiyama11.tinybudget.ui.overlay.DraggableOverlay
 import io.github.arashiyama11.tinybudget.ui.overlay.OverlayUi
